@@ -7,12 +7,10 @@ import Capacitor
  */
 @objc(SecureCredentialsPlugin)
 public class SecureCredentialsPlugin: CAPPlugin {
-    private let implementation = SecureCredentials()
 
-    @objc func echo(_ call: CAPPluginCall) {
-        let value = call.getString("value") ?? ""
-        call.resolve([
-            "value": implementation.echo(value)
-        ])
+    @objc func putCredential(_ call: CAPPluginCall) {
+        let service = call.getString("service") ?? ""
+
+        print("call: \(call) service: \(service)")
     }
 }

@@ -20,5 +20,7 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>NSPrincipalClass</key>
 	<string></string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>For an easier and faster log in.</string>
 </dict>
 </plist>
