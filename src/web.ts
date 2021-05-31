@@ -2,35 +2,35 @@ import { WebPlugin } from '@capacitor/core';
 
 import type {
   Credential,
-  GetCredentialsError,
   Failure,
+  SecureCredentialsError,
   SecureCredentialsPlugin,
   SecurityLevels,
   Success
 } from './definitions';
 
 export class SecureCredentialsWeb extends WebPlugin implements SecureCredentialsPlugin {
-  async getCredential(service: string, username: string): Promise<Success<Credential> | Failure<GetCredentialsError>> {
-    return setTimeout(() => console.log('getCredential', service, username) , 1000) as unknown as Success<Credential> | Failure<GetCredentialsError>;
+  async getCredential(options: { service: string, username: string }): Promise<Success<Credential> | Failure<SecureCredentialsError>> {
+    return setTimeout(() => console.log('WEB -> getCredential', options.service, options.username) , 1000) as unknown as Success<Credential> | Failure<SecureCredentialsError>;
   }
 
-  async getCredentials(service: string): Promise<string[]> {
-    return setTimeout(() => console.log('getCredentials', service) , 1000) as unknown as string[];
+  async getCredentials(options: { service: string }): Promise<Success<string[]> | Failure<SecureCredentialsError>> {
+    return setTimeout(() => console.log('WEB -> getCredentials', options.service) , 1000) as unknown as Success<string[]> | Failure<SecureCredentialsError>;
   }
 
-  async removeCredential(service: string, username: string): Promise<boolean> {
-    return setTimeout(() => console.log('removeCredential', service, username) , 1000) as unknown as boolean;
+  async removeCredential(options: { service: string, username: string }): Promise<Success<boolean> | Failure<SecureCredentialsError>> {
+    return setTimeout(() => console.log('WEB -> removeCredential', options.service, options.username) , 1000) as unknown as Success<boolean> | Failure<SecureCredentialsError>;
   }
 
-  async removeCredentials(service: string): Promise<boolean> {
-    return setTimeout(() => console.log('removeCredentials', service) , 1000) as unknown as boolean;
+  async removeCredentials(options: { service: string }): Promise<Success<boolean> | Failure<SecureCredentialsError>> {
+    return setTimeout(() => console.log('WEB -> removeCredentials', options.service) , 1000) as unknown as Success<boolean> | Failure<SecureCredentialsError>;
   }
 
-  async putCredential(options: { service: string }): Promise<{ value: boolean }> {
-    return setTimeout(() => console.log('putCredential', options.service) , 1000) as unknown as { value: boolean };
+  async putCredential(options: { service: string, username: string, password: string, options?: { securityLevel?: SecurityLevels, minimumSecurityLevel?: SecurityLevels } }): Promise<Success<boolean> | Failure<SecureCredentialsError>> {
+    return setTimeout(() => console.log('WEB -> putCredential', options.service) , 1000) as unknown as Success<boolean> | Failure<SecureCredentialsError>;
   }
 
-  async canUseProtection(securityLevel: SecurityLevels): Promise<boolean> {
-    return setTimeout(() => console.log('canUseProtection', securityLevel) , 1000) as unknown as boolean;
+  async canUseSecurityLevel(options: { securityLevel: SecurityLevels }): Promise<Success<boolean> | Failure<SecureCredentialsError>> {
+    return setTimeout(() => console.log('WEB -> canUseProtection', options.securityLevel) , 1000) as unknown as Success<boolean> | Failure<SecureCredentialsError>;
   }
 }

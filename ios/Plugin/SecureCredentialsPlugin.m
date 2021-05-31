@@ -9,5 +9,5 @@ CAP_PLUGIN(SecureCredentialsPlugin, "SecureCredentials",
     CAP_PLUGIN_METHOD(removeCredential, CAPPluginReturnPromise);
     CAP_PLUGIN_METHOD(removeCredentials, CAPPluginReturnPromise);
     CAP_PLUGIN_METHOD(putCredential, CAPPluginReturnPromise);
-    CAP_PLUGIN_METHOD(canUseProtection, CAPPluginReturnPromise);
+    CAP_PLUGIN_METHOD(canUseSecurityLevel, CAPPluginReturnPromise);
 )

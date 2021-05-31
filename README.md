@@ -18,7 +18,7 @@ npx cap sync
 * [`removeCredential(...)`](#removecredential)
 * [`removeCredentials(...)`](#removecredentials)
 * [`putCredential(...)`](#putcredential)
-* [`canUseProtection(...)`](#canuseprotection)
+* [`canUseSecurityLevel(...)`](#canusesecuritylevel)
 * [Interfaces](#interfaces)
 
 </docgen-index>
@@ -29,13 +29,12 @@ npx cap sync
 ### getCredential(...)
 
 ```typescript
-getCredential(service: string, username: string) => any
+getCredential(options: { service: string; username: string; }) => any
 ```
 
-| Param          | Type                |
-| -------------- | ------------------- |
-| **`service`**  | <code>string</code> |
-| **`username`** | <code>string</code> |
+| Param         | Type                                                |
+| ------------- | --------------------------------------------------- |
+| **`options`** | <code>{ service: string; username: string; }</code> |
 
 **Returns:** <code>any</code>
 
@@ -45,53 +44,7 @@ getCredential(service: string, username: string) => any
 ### getCredentials(...)
 
 ```typescript
-getCredentials(service: string) => any
-```
-
-| Param         | Type                |
-| ------------- | ------------------- |
-| **`service`** | <code>string</code> |
-
-**Returns:** <code>any</code>
-
---------------------
-
-
-### removeCredential(...)
-
-```typescript
-removeCredential(service: string, username: string) => any
-```
-
-| Param          | Type                |
-| -------------- | ------------------- |
-| **`service`**  | <code>string</code> |
-| **`username`** | <code>string</code> |
-
-**Returns:** <code>any</code>
-
---------------------
-
-
-### removeCredentials(...)
-
-```typescript
-removeCredentials(service: string) => any
-```
-
-| Param         | Type                |
-| ------------- | ------------------- |
-| **`service`** | <code>string</code> |
-
-**Returns:** <code>any</code>
-
---------------------
-
-
-### putCredential(...)
-
-```typescript
-putCredential(options: { service: string; }) => any
+getCredentials(options: { service: string; }) => any
 ```
 
 | Param         | Type                              |
@@ -103,15 +56,60 @@ putCredential(options: { service: string; }) => any
 --------------------
 
 
-### canUseProtection(...)
+### removeCredential(...)
 
 ```typescript
-canUseProtection(securityLevel: SecurityLevels) => any
+removeCredential(options: { service: string; username: string; }) => any
 ```
 
-| Param               | Type                                                                                       |
-| ------------------- | ------------------------------------------------------------------------------------------ |
-| **`securityLevel`** | <code>"L1_Encrypted" \| "L2_DeviceUnlocked" \| "L3_UserPresence" \| "L4_Biometrics"</code> |
+| Param         | Type                                                |
+| ------------- | --------------------------------------------------- |
+| **`options`** | <code>{ service: string; username: string; }</code> |
+
+**Returns:** <code>any</code>
+
+--------------------
+
+
+### removeCredentials(...)
+
+```typescript
+removeCredentials(options: { service: string; }) => any
+```
+
+| Param         | Type                              |
+| ------------- | --------------------------------- |
+| **`options`** | <code>{ service: string; }</code> |
+
+**Returns:** <code>any</code>
+
+--------------------
+
+
+### putCredential(...)
+
+```typescript
+putCredential(options: { service: string; username: string; password: string; options?: { securityLevel?: SecurityLevels; minimumSecurityLevel?: SecurityLevels; }; }) => any
+```
+
+| Param         | Type                                                                                                                                                                                                                                                                                      |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`options`** | <code>{ service: string; username: string; password: string; options?: { securityLevel?: "L1_Encrypted" \| "L2_DeviceUnlocked" \| "L3_UserPresence" \| "L4_Biometrics"; minimumSecurityLevel?: "L1_Encrypted" \| "L2_DeviceUnlocked" \| "L3_UserPresence" \| "L4_Biometrics"; }; }</code> |
+
+**Returns:** <code>any</code>
+
+--------------------
+
+
+### canUseSecurityLevel(...)
+
+```typescript
+canUseSecurityLevel(options: { securityLevel: SecurityLevels; }) => any
+```
+
+| Param         | Type                                            |
+| ------------- | ----------------------------------------------- |
+| **`options`** | <code>{ securityLevel: SecurityLevels; }</code> |
 
 **Returns:** <code>any</code>
 
@@ -135,6 +133,7 @@ canUseProtection(securityLevel: SecurityLevels) => any
 | -------------- | ------------------- |
 | **`username`** | <code>string</code> |
 | **`password`** | <code>string</code> |
+| **`service`**  | <code>string</code> |
 
 
 #### Failure
@@ -145,7 +144,7 @@ canUseProtection(securityLevel: SecurityLevels) => any
 | **`error`**   | <code>E</code>     |
 
 
-#### GetCredentialsError
+#### SecureCredentialsError
 
 | Prop          | Type                                                    |
 | ------------- | ------------------------------------------------------- |
