@@ -13,10 +13,7 @@ public class SecureCredentialsPlugin: CAPPlugin {
         let service = call.getString(.kService) ?? ""
         let username = call.getString(.kUsername) ?? ""
         let password = call.getString(.kPassword) ?? ""
-        let options = Options(dictionary: call.getObject(.kOptions) ?? [:])
-
-        print("call: \(call) service: \(service) username: \(username) password: \(password) options: \(options)")
-        
+        let options = Options(dictionary: call.getObject(.kOptions) ?? [:])        
         
         let searchQuery: [String: Any] = [kSecClass as String: kSecClassInternetPassword,
                                     kSecAttrServer as String: service,
