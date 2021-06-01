@@ -17,9 +17,12 @@ npx cap sync
 * [`getCredentials(...)`](#getcredentials)
 * [`removeCredential(...)`](#removecredential)
 * [`removeCredentials(...)`](#removecredentials)
-* [`putCredential(...)`](#putcredential)
+* [`addCredential(...)`](#addcredential)
+* [`setCredentials(...)`](#setcredentials)
 * [`canUseSecurityLevel(...)`](#canusesecuritylevel)
+* [`maximumAllowedSecurityLevel()`](#maximumallowedsecuritylevel)
 * [Interfaces](#interfaces)
+* [Enums](#enums)
 
 </docgen-index>
 
@@ -31,6 +34,8 @@ npx cap sync
 ```typescript
 getCredential(options: { service: string; username: string; }) => any
 ```
+
+Get a credential matching a service and username if one exists.
 
 | Param         | Type                                                |
 | ------------- | --------------------------------------------------- |
@@ -47,6 +52,9 @@ getCredential(options: { service: string; username: string; }) => any
 getCredentials(options: { service: string; }) => any
 ```
 
+Get all credentials stored in a service. 
+A user may be challenged with an ID check every time this is called.
+
 | Param         | Type                              |
 | ------------- | --------------------------------- |
 | **`options`** | <code>{ service: string; }</code> |
@@ -61,6 +69,8 @@ getCredentials(options: { service: string; }) => any
 ```typescript
 removeCredential(options: { service: string; username: string; }) => any
 ```
+
+Remove a specific credential
 
 | Param         | Type                                                |
 | ------------- | --------------------------------------------------- |
@@ -77,6 +87,8 @@ removeCredential(options: { service: string; username: string; }) => any
 removeCredentials(options: { service: string; }) => any
 ```
 
+Remove all credentials belonging to a service
+
 | Param         | Type                              |
 | ------------- | --------------------------------- |
 | **`options`** | <code>{ service: string; }</code> |
@@ -86,15 +98,34 @@ removeCredentials(options: { service: string; }) => any
 --------------------
 
 
-### putCredential(...)
+### addCredential(...)
 
 ```typescript
-putCredential(options: { service: string; username: string; password: string; options?: { securityLevel?: SecurityLevels; minimumSecurityLevel?: SecurityLevels; }; }) => any
+addCredential(options: { credential: Credential; options?: CredentialOptions; }) => any
 ```
 
-| Param         | Type                                                                                                                                                                                                                                                                                      |
-| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **`options`** | <code>{ service: string; username: string; password: string; options?: { securityLevel?: "L1_Encrypted" \| "L2_DeviceUnlocked" \| "L3_UserPresence" \| "L4_Biometrics"; minimumSecurityLevel?: "L1_Encrypted" \| "L2_DeviceUnlocked" \| "L3_UserPresence" \| "L4_Biometrics"; }; }</code> |
+Add a credential into the secure store. This will overwrite any existing credential of the same service and username.
+
+| Param         | Type                                                                                                                             |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| **`options`** | <code>{ credential: <a href="#credential">Credential</a>; options?: <a href="#credentialoptions">CredentialOptions</a>; }</code> |
+
+**Returns:** <code>any</code>
+
+--------------------
+
+
+### setCredentials(...)
+
+```typescript
+setCredentials(options: { service: string; credentials: CredentialSecret[]; options?: CredentialOptions; }) => any
+```
+
+Replace all credentials of a service with the credentials supplied.
+
+| Param         | Type                                                                                                             |
+| ------------- | ---------------------------------------------------------------------------------------------------------------- |
+| **`options`** | <code>{ service: string; credentials: {}; options?: <a href="#credentialoptions">CredentialOptions</a>; }</code> |
 
 **Returns:** <code>any</code>
 
@@ -104,12 +135,28 @@ putCredential(options: { service: string; username: string; password: string; op
 ### canUseSecurityLevel(...)
 
 ```typescript
-canUseSecurityLevel(options: { securityLevel: SecurityLevels; }) => any
+canUseSecurityLevel(options: { securityLevel: SecurityLevel; }) => any
 ```
 
-| Param         | Type                                            |
-| ------------- | ----------------------------------------------- |
-| **`options`** | <code>{ securityLevel: SecurityLevels; }</code> |
+Verify if the current platform can handle a particular security level.
+
+| Param         | Type                                                                        |
+| ------------- | --------------------------------------------------------------------------- |
+| **`options`** | <code>{ securityLevel: <a href="#securitylevel">SecurityLevel</a>; }</code> |
+
+**Returns:** <code>any</code>
+
+--------------------
+
+
+### maximumAllowedSecurityLevel()
+
+```typescript
+maximumAllowedSecurityLevel() => any
+```
+
+Determine the maximum allowed security level on a platform.
+This may change over the course of an application's lifetime as users may add or remove pins or biometric scanning features.
 
 **Returns:** <code>any</code>
 
@@ -150,5 +197,33 @@ canUseSecurityLevel(options: { securityLevel: SecurityLevels; }) => any
 | ------------- | ------------------------------------------------------- |
 | **`code`**    | <code>"failedToAccess" \| "no data" \| "unknown"</code> |
 | **`message`** | <code>string</code>                                     |
+
+
+#### CredentialOptions
+
+| Prop                | Type                                                    |
+| ------------------- | ------------------------------------------------------- |
+| **`securityLevel`** | <code><a href="#securitylevel">SecurityLevel</a></code> |
+
+
+#### CredentialSecret
+
+| Prop           | Type                |
+| -------------- | ------------------- |
+| **`username`** | <code>string</code> |
+| **`password`** | <code>string</code> |
+
+
+### Enums
+
+
+#### SecurityLevel
+
+| Members                 | Value                            |
+| ----------------------- | -------------------------------- |
+| **`L1_Encrypted`**      | <code>'L1_Encrypted'</code>      |
+| **`L2_DeviceUnlocked`** | <code>'L2_DeviceUnlocked'</code> |
+| **`L3_UserPresence`**   | <code>'L3_UserPresence'</code>   |
+| **`L4_Biometrics`**     | <code>'L4_Biometrics'</code>     |
 
 </docgen-api>

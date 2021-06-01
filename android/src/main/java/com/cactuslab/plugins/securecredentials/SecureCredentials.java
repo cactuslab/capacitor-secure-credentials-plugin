@@ -5,4 +5,6 @@ public class SecureCredentials {
     public String echo(String value) {
         return value;
     }
+
+    public
 }

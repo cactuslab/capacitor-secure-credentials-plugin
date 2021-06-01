@@ -5,7 +5,9 @@ import type {
   Failure,
   SecureCredentialsError,
   SecureCredentialsPlugin,
-  SecurityLevels,
+  SecurityLevel,
+  CredentialOptions,
+  CredentialSecret,
   Success
 } from './definitions';
 
@@ -26,11 +28,19 @@ export class SecureCredentialsWeb extends WebPlugin implements SecureCredentials
     return setTimeout(() => console.log('WEB -> removeCredentials', options.service) , 1000) as unknown as Success<boolean> | Failure<SecureCredentialsError>;
   }
 
-  async putCredential(options: { service: string, username: string, password: string, options?: { securityLevel?: SecurityLevels, minimumSecurityLevel?: SecurityLevels } }): Promise<Success<boolean> | Failure<SecureCredentialsError>> {
-    return setTimeout(() => console.log('WEB -> putCredential', options.service) , 1000) as unknown as Success<boolean> | Failure<SecureCredentialsError>;
+  async addCredential(options: { credential: Credential, options?: CredentialOptions }): Promise<Success<boolean> | Failure<SecureCredentialsError>> {
+    return setTimeout(() => console.log('WEB -> addCredential', options.credential.service) , 1000) as unknown as Success<boolean> | Failure<SecureCredentialsError>;
   }
 
-  async canUseSecurityLevel(options: { securityLevel: SecurityLevels }): Promise<Success<boolean> | Failure<SecureCredentialsError>> {
+  async setCredentials(options: { service: string, credentials: CredentialSecret[], options?: CredentialOptions}): Promise<Success<boolean> | Failure<SecureCredentialsError>> {
+    return setTimeout(() => console.log('WEB -> setCredentials', options.service) , 1000) as unknown as Success<boolean> | Failure<SecureCredentialsError>;
+  }
+
+  async canUseSecurityLevel(options: { securityLevel: SecurityLevel }): Promise<Success<boolean> | Failure<SecureCredentialsError>> {
     return setTimeout(() => console.log('WEB -> canUseProtection', options.securityLevel) , 1000) as unknown as Success<boolean> | Failure<SecureCredentialsError>;
+  }
+
+  async maximumAllowedSecurityLevel(): Promise<Success<SecurityLevel> | Failure<SecureCredentialsError>> {
+    return setTimeout(() => console.log('WEB -> maximumAllowedSecurityLevel?') , 1000) as unknown as Success<SecurityLevel> | Failure<SecureCredentialsError>;
   }
 }
