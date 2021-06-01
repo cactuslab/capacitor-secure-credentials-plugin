@@ -8,7 +8,7 @@ import LocalAuthentication
  */
 @objc(SecureCredentialsPlugin)
 public class SecureCredentialsPlugin: CAPPlugin {
-
+    
     @objc func putCredential(_ call: CAPPluginCall) {
         let service = call.getString(.kService) ?? ""
         let username = call.getString(.kUsername) ?? ""
@@ -34,6 +34,9 @@ public class SecureCredentialsPlugin: CAPPlugin {
             return
         }
         guard status != errSecInteractionNotAllowed else {
+            // The credential exists but we can't read it because the user hasn't completed an ID check
+            // We can safely remove the credential and overwrite it because this library is designed to
+            // assume the simplest case.
             do {
                 try delete(service: service, username: username)
                 try save(service: service, username: username, password: password, options: options)
@@ -98,7 +101,7 @@ public class SecureCredentialsPlugin: CAPPlugin {
                                     kSecAttrServer as String: service,
                                     kSecMatchLimit as String: kSecMatchLimitAll,
                                     kSecReturnAttributes as String: true,
-                                    kSecReturnData as String: false]
+                                    kSecReturnData as String: true]
         
         var item: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &item)
@@ -117,8 +120,11 @@ public class SecureCredentialsPlugin: CAPPlugin {
             return
         }
         
-        let usernames = existingItem.compactMap({
-            return $0[kSecAttrAccount as String] as? String
+        let usernames: [CredentialResult] = existingItem.compactMap({
+            if let username = $0[kSecAttrAccount as String] as? String, let passwordData = $0[kSecValueData as String] as? Data, let password = String(data: passwordData, encoding: String.Encoding.utf8) {
+                return CredentialResult(username: username, service: service,password:password)
+            }
+            return nil
         })
         
         let result = Success(result: usernames)
@@ -231,58 +237,45 @@ public class SecureCredentialsPlugin: CAPPlugin {
         guard status == errSecSuccess else { throw SecureCredentialsError.unknown(status: "OSStatus: \(status)") }
     }
     
-    private func delete(service: String, username: String) throws {
-        let query: [String: Any] = [kSecClass as String: kSecClassInternetPassword,
-                                    kSecAttrServer as String: service,
-                                    kSecAttrAccount as String: username]
-        
-        let status = SecItemDelete(query as CFDictionary)
-        guard status == errSecSuccess || status == errSecItemNotFound else { throw SecureCredentialsError.unknown(status: "OSStatus: \(status)") }
-    }
-    
-    private func delete(service: String) throws {
-        let query: [String: Any] = [kSecClass as String: kSecClassInternetPassword,
+    private func delete(service: String, username: String? = nil) throws {
+        var query: [String: Any] = [kSecClass as String: kSecClassInternetPassword,
                                     kSecAttrServer as String: service]
+        if let username = username {
+            query[kSecAttrAccount as String] = username
+        }
         
         let status = SecItemDelete(query as CFDictionary)
         guard status == errSecSuccess || status == errSecItemNotFound else { throw SecureCredentialsError.unknown(status: "OSStatus: \(status)") }
     }
-    
 }
 
-
-protocol JsAble {
+private protocol JsAble {
     func toJS() -> [String: Any]
 }
 
+private let BooleanSuccess = Success<Bool>(result: nil)
 
-
-let BooleanSuccess = Success<Bool>(result: nil)
-
-struct Success<T> : JsAble {
+private struct Success<T> : JsAble {
     let result: T?
     
     func toJS() -> [String: Any] {
+        var js: [String: Any] = ["success": true]
+        var res: Any?
         if let result = result as? JsAble {
-            return [
-                "success" : true,
-                "result" : result.toJS()
-            ]
+            res = result.toJS()
+        } else if let result = result as? [JsAble] {
+            res = result.map({$0.toJS()})
         } else if let result = result {
-            return [
-                "success" : true,
-                "result" : result
-            ]
-        } else {
-            return [
-                "success" : true
-            ]
+            res = result
         }
-        
+        if let res = res {
+            js["result"] = res
+        }
+        return js
     }
 }
 
-struct Failure<T> : JsAble {
+private struct Failure<T> : JsAble {
     let error: T
     
     func toJS() -> [String: Any] {
@@ -293,12 +286,12 @@ struct Failure<T> : JsAble {
     }
 }
 
-struct Credentials {
+private struct Credentials {
     let username: String
     let service: String
 }
 
-struct CredentialResult : JsAble {
+private struct CredentialResult : JsAble {
     let username: String
     let service: String
     let password: String
@@ -312,7 +305,7 @@ struct CredentialResult : JsAble {
     }
 }
 
-enum SecureCredentialsError: Error, JsAble {
+private enum SecureCredentialsError: Error, JsAble {
     case failedToAccess
     case noData
     case unavailable(message: String)
@@ -345,7 +338,7 @@ enum SecureCredentialsError: Error, JsAble {
 }
 
 
-enum SecurityLevel: String {
+private enum SecurityLevel: String {
     case L1_Encrypted = "L1_Encrypted"
     case L2_DeviceUnlocked = "L2_DeviceUnlocked"
     case L3_UserPresence = "L3_UserPresence"
@@ -365,7 +358,7 @@ enum SecurityLevel: String {
     }
 }
 
-struct Options {
+private struct Options {
     let securityLevel : SecurityLevel
     
     init(dictionary: [String: Any]) {
@@ -377,12 +370,12 @@ struct Options {
     }
 }
 
-extension String {
-    fileprivate static let kService = "service"
-    fileprivate static let kUsername = "username"
-    fileprivate static let kPassword = "password"
-    fileprivate static let kOptions = "options"
-    fileprivate static let kSecurityLevel = "securityLevel"
-    fileprivate static let kMinimumSecurityLevel = "minimumSecurityLevel"
-    fileprivate static let kUsernames = "usernames"
+private extension String {
+    static let kService = "service"
+    static let kUsername = "username"
+    static let kPassword = "password"
+    static let kOptions = "options"
+    static let kSecurityLevel = "securityLevel"
+    static let kMinimumSecurityLevel = "minimumSecurityLevel"
+    static let kUsernames = "usernames"
 }

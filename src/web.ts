@@ -14,8 +14,8 @@ export class SecureCredentialsWeb extends WebPlugin implements SecureCredentials
     return setTimeout(() => console.log('WEB -> getCredential', options.service, options.username) , 1000) as unknown as Success<Credential> | Failure<SecureCredentialsError>;
   }
 
-  async getCredentials(options: { service: string }): Promise<Success<string[]> | Failure<SecureCredentialsError>> {
-    return setTimeout(() => console.log('WEB -> getCredentials', options.service) , 1000) as unknown as Success<string[]> | Failure<SecureCredentialsError>;
+  async getCredentials(options: { service: string }): Promise<Success<Credential[]> | Failure<SecureCredentialsError>> {
+    return setTimeout(() => console.log('WEB -> getCredentials', options.service) , 1000) as unknown as Success<Credential[]> | Failure<SecureCredentialsError>;
   }
 
   async removeCredential(options: { service: string, username: string }): Promise<Success<boolean> | Failure<SecureCredentialsError>> {

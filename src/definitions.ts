@@ -29,7 +29,7 @@ export interface SecureCredentialsError {
 
 export interface SecureCredentialsPlugin {
     getCredential(options: { service: string, username: string }): Promise<Success<Credential> | Failure<SecureCredentialsError>>;
-    getCredentials(options: { service: string }): Promise<Success<string[]> | Failure<SecureCredentialsError>>;
+    getCredentials(options: { service: string }): Promise<Success<Credential[]> | Failure<SecureCredentialsError>>;
     removeCredential(options: { service: string, username: string }): Promise<Success<boolean> | Failure<SecureCredentialsError>>;
     removeCredentials(options: { service: string }): Promise<Success<boolean> | Failure<SecureCredentialsError>>;
     putCredential(options: { service: string, username: string, password: string, options?: { securityLevel?: SecurityLevels, minimumSecurityLevel?: SecurityLevels } }): Promise<Success<boolean> | Failure<SecureCredentialsError>>;
