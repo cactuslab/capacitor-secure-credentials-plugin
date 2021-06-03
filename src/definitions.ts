@@ -9,13 +9,13 @@ export enum SecurityLevel {
 export interface Credential {
     username: string;
     password: string;
-    service: string;
+    // service: string;
 }
 
-export interface CredentialSecret {
-    username: string;
-    password: string;
-}
+// export interface CredentialSecret {
+//     username: string;
+//     password: string;
+// }
 export interface Success<T> {
     success: true;
     result: T;
@@ -38,32 +38,28 @@ export interface SecureCredentialsPlugin {
     /**
      * Get a credential matching a service and username if one exists.
      */
-    getCredential(options: { service: string, username: string }): Promise<Success<Credential> | Failure<SecureCredentialsError>>;
+    getCredential(options: {service: string, username: string}): Promise<Success<Credential> | Failure<SecureCredentialsError>>;
     /** 
      * Get all credentials stored in a service. 
      * A user may be challenged with an ID check every time this is called.
      */
-    getCredentials(options: { service: string }): Promise<Success<Credential[]> | Failure<SecureCredentialsError>>;
+    getUsernames(options: {service: string}): Promise<Success<string[]> | Failure<SecureCredentialsError>>;
     /** 
      * Remove a specific credential 
      */
-    removeCredential(options: { service: string, username: string }): Promise<Success<boolean> | Failure<SecureCredentialsError>>;
+    removeCredential(options: {service: string, username: string}): Promise<Success<boolean> | Failure<SecureCredentialsError>>;
     /** 
      * Remove all credentials belonging to a service 
      */
-    removeCredentials(options: { service: string }): Promise<Success<boolean> | Failure<SecureCredentialsError>>;
+    removeCredentials(options: {service: string}): Promise<Success<boolean> | Failure<SecureCredentialsError>>;
     /** 
-     * Add a credential into the secure store. This will overwrite any existing credential of the same service and username. 
+     * Set a credential into the secure store. This will overwrite any existing credential of the same service and username. 
      */
-    addCredential(options: { credential: Credential, options?: CredentialOptions }): Promise<Success<boolean> | Failure<SecureCredentialsError>>;
-    /** 
-     * Replace all credentials of a service with the credentials supplied. 
-     */
-    setCredentials(options: { service: string, credentials: CredentialSecret[], options?: CredentialOptions}): Promise<Success<boolean> | Failure<SecureCredentialsError>>;
+    setCredential(options: {service: string, credential: Credential, options?: CredentialOptions}): Promise<Success<boolean> | Failure<SecureCredentialsError>>;
     /**
      * Verify if the current platform can handle a particular security level.
      */
-    canUseSecurityLevel(options: { securityLevel: SecurityLevel }): Promise<Success<boolean> | Failure<SecureCredentialsError>>;
+    canUseSecurityLevel(options: {securityLevel: SecurityLevel}): Promise<Success<boolean> | Failure<SecureCredentialsError>>;
     /**
      * Determine the maximum allowed security level on a platform.
      * This may change over the course of an application's lifetime as users may add or remove pins or biometric scanning features.

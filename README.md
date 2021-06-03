@@ -14,11 +14,10 @@ npx cap sync
 <docgen-index>
 
 * [`getCredential(...)`](#getcredential)
-* [`getCredentials(...)`](#getcredentials)
+* [`getUsernames(...)`](#getusernames)
 * [`removeCredential(...)`](#removecredential)
 * [`removeCredentials(...)`](#removecredentials)
-* [`addCredential(...)`](#addcredential)
-* [`setCredentials(...)`](#setcredentials)
+* [`setCredential(...)`](#setcredential)
 * [`canUseSecurityLevel(...)`](#canusesecuritylevel)
 * [`maximumAllowedSecurityLevel()`](#maximumallowedsecuritylevel)
 * [Interfaces](#interfaces)
@@ -46,10 +45,10 @@ Get a credential matching a service and username if one exists.
 --------------------
 
 
-### getCredentials(...)
+### getUsernames(...)
 
 ```typescript
-getCredentials(options: { service: string; }) => any
+getUsernames(options: { service: string; }) => any
 ```
 
 Get all credentials stored in a service. 
@@ -98,34 +97,17 @@ Remove all credentials belonging to a service
 --------------------
 
 
-### addCredential(...)
+### setCredential(...)
 
 ```typescript
-addCredential(options: { credential: Credential; options?: CredentialOptions; }) => any
+setCredential(options: { service: string; credential: Credential; options?: CredentialOptions; }) => any
 ```
 
-Add a credential into the secure store. This will overwrite any existing credential of the same service and username.
+Set a credential into the secure store. This will overwrite any existing credential of the same service and username.
 
-| Param         | Type                                                                                                                             |
-| ------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| **`options`** | <code>{ credential: <a href="#credential">Credential</a>; options?: <a href="#credentialoptions">CredentialOptions</a>; }</code> |
-
-**Returns:** <code>any</code>
-
---------------------
-
-
-### setCredentials(...)
-
-```typescript
-setCredentials(options: { service: string; credentials: CredentialSecret[]; options?: CredentialOptions; }) => any
-```
-
-Replace all credentials of a service with the credentials supplied.
-
-| Param         | Type                                                                                                             |
-| ------------- | ---------------------------------------------------------------------------------------------------------------- |
-| **`options`** | <code>{ service: string; credentials: {}; options?: <a href="#credentialoptions">CredentialOptions</a>; }</code> |
+| Param         | Type                                                                                                                                              |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`options`** | <code>{ service: string; credential: <a href="#credential">Credential</a>; options?: <a href="#credentialoptions">CredentialOptions</a>; }</code> |
 
 **Returns:** <code>any</code>
 
@@ -180,7 +162,6 @@ This may change over the course of an application's lifetime as users may add or
 | -------------- | ------------------- |
 | **`username`** | <code>string</code> |
 | **`password`** | <code>string</code> |
-| **`service`**  | <code>string</code> |
 
 
 #### Failure
@@ -204,14 +185,6 @@ This may change over the course of an application's lifetime as users may add or
 | Prop                | Type                                                    |
 | ------------------- | ------------------------------------------------------- |
 | **`securityLevel`** | <code><a href="#securitylevel">SecurityLevel</a></code> |
-
-
-#### CredentialSecret
-
-| Prop           | Type                |
-| -------------- | ------------------- |
-| **`username`** | <code>string</code> |
-| **`password`** | <code>string</code> |
 
 
 ### Enums

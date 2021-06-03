@@ -9,8 +9,10 @@ import LocalAuthentication
 @objc(SecureCredentialsPlugin)
 public class SecureCredentialsPlugin: CAPPlugin {
     
-    @objc func addCredential(_ call: CAPPluginCall) {
-        guard let credential = Credential(jsObject: call.getObject(.kCredential)) else {
+    @objc func setCredential(_ call: CAPPluginCall) {
+        guard let service = call.getString(.kService),
+              let credential = Credential(jsObject: call.getObject(.kCredential))
+        else {
             call.resolve(SecureCredentialsError.unknown(status: "Missing Credential Parameters").toJS())
             return
         }
@@ -18,7 +20,7 @@ public class SecureCredentialsPlugin: CAPPlugin {
         let options = Options(jsObject: call.getObject(.kOptions))
         
         let searchQuery: [String: Any] = [kSecClass as String: kSecClassInternetPassword,
-                                          kSecAttrServer as String: credential.service,
+                                          kSecAttrServer as String: service,
                                           kSecAttrAccount as String: credential.username,
                                     kSecUseAuthenticationUI as String: kSecUseAuthenticationUIFail
         ]
@@ -28,7 +30,8 @@ public class SecureCredentialsPlugin: CAPPlugin {
         guard status != errSecItemNotFound else {
             
             do {
-                try save(credential: credential, options: options)
+                try save(service: service, credential: credential, options: options)
+                try addAccount(service: service, username: credential.username)
             } catch let error {
                 call.resolve((error as! SecureCredentialsError).toJS())
             }
@@ -40,8 +43,10 @@ public class SecureCredentialsPlugin: CAPPlugin {
             // We can safely remove the credential and overwrite it because this library is designed to
             // assume the simplest case.
             do {
-                try delete(service: credential.service, username: credential.username)
-                try save(credential: credential, options: options)
+                try delete(service: service, username: credential.username)
+                try removeAccount(service: service, username: credential.username)
+                try save(service: service, credential: credential, options: options)
+                try addAccount(service: service, username: credential.username)
             } catch let error {
                 call.resolve((error as! SecureCredentialsError).toJS())
             }
@@ -54,7 +59,7 @@ public class SecureCredentialsPlugin: CAPPlugin {
         
         // Update
         do {
-            try update(credential: credential, options: options)
+            try update(service: service, credential: credential, options: options)
         } catch let error {
             call.resolve((error as! SecureCredentialsError).toJS())
         }
@@ -62,47 +67,17 @@ public class SecureCredentialsPlugin: CAPPlugin {
         call.resolve(SecureCredentialsError.noData.toJS())
     }
     
-    @objc func setCredentials(_ call: CAPPluginCall) {
-        guard let service = call.getString(.kService) else {
-            call.resolve(SecureCredentialsError.unknown(status: "Missing Parameter \(String.kService)").toJS())
-            return
-        }
-        
-        guard let credentials: [Credential] = call.getArray(.kCredentials, JSObject.self)?.compactMap({ jsValue in
-            guard let username = jsValue[.kUsername] as? String, let password = jsValue[.kPassword] as? String else {
-                return nil
-            }
-            return Credential(service: service, username: username, password: password)
-        }) else {
-            call.resolve(SecureCredentialsError.unknown(status: "Missing Credentials Array").toJS())
-            return
-        }
-        
-        let options = Options(jsObject: call.getObject(.kOptions))
-        
-        removeCredentials(call)
-        
-        do {
-            try credentials.forEach { credential in
-                try save(credential: credential, options: options)
-            }
-        } catch let error {
-            call.resolve((error as! SecureCredentialsError).toJS())
-            return
-        }
-        
-        call.resolve(BooleanSuccess.toJS())
-    }
-    
     @objc func getCredential(_ call: CAPPluginCall) {
-        guard let identifier = CredentialIdentifier(fromCall: call) else {
+        guard let service = call.getString(.kService),
+              let username = call.getString(.kUsername)
+        else {
             call.resolve(SecureCredentialsError.unknown(status: "Missing Identifier Parameters in Call").toJS())
             return
         }
         
         let query: [String: Any] = [kSecClass as String: kSecClassInternetPassword,
-                                    kSecAttrServer as String: identifier.service,
-                                    kSecAttrAccount as String: identifier.username,
+                                    kSecAttrServer as String: service,
+                                    kSecAttrAccount as String: username,
                                     kSecMatchLimit as String: kSecMatchLimitOne,
                                     kSecReturnAttributes as String: true,
                                     kSecReturnData as String: true]
@@ -126,55 +101,33 @@ public class SecureCredentialsPlugin: CAPPlugin {
             return
         }
         
-        call.resolve(Success(result: Credential(service: identifier.service, username: identifier.username, password: password)).toJS())
+        call.resolve(Success(result: Credential(username: username, password: password)).toJS())
     }
     
-    @objc func getCredentials(_ call: CAPPluginCall) {
+    @objc func getUsernames(_ call: CAPPluginCall) {
         let service = call.getString(.kService) ?? ""
         
-        let query: [String: Any] = [kSecClass as String: kSecClassInternetPassword,
-                                    kSecAttrServer as String: service,
-                                    kSecMatchLimit as String: kSecMatchLimitAll,
-                                    kSecReturnAttributes as String: true,
-                                    kSecReturnData as String: true]
-        
-        var item: CFTypeRef?
-        let status = SecItemCopyMatching(query as CFDictionary, &item)
-        guard status != errSecItemNotFound else {
-            call.resolve([.kUsernames:[]])
-            return
+        do {
+            let accounts = try getAccounts(service: service)
+            let result = Success(result: accounts)
+            call.resolve(result.toJS())
+        } catch let error {
+            call.resolve((error as! SecureCredentialsError).toJS())
         }
-        guard status == errSecSuccess else {
-            call.resolve(SecureCredentialsError.unknown(status: "OSStatus: \(status)").toJS())
-            return
-        }
-        
-        guard let existingItem = item as? [[String : Any]]
-        else {
-            call.resolve(SecureCredentialsError.unknown(status: "OSStatus: \(status)").toJS())
-            return
-        }
-        
-        let usernames: [Credential] = existingItem.compactMap({
-            if let username = $0[kSecAttrAccount as String] as? String, let passwordData = $0[kSecValueData as String] as? Data, let password = String(data: passwordData, encoding: String.Encoding.utf8) {
-                return Credential(service: service, username: username, password:password)
-            }
-            return nil
-        })
-        
-        let result = Success(result: usernames)
-        call.resolve(result.toJS())
     }
     
     @objc func removeCredential(_ call: CAPPluginCall) {
-        guard let identifier = CredentialIdentifier(fromCall: call) else {
+        guard let service = call.getString(.kService),
+              let username = call.getString(.kUsername)
+        else {
             call.resolve(SecureCredentialsError.unknown(status: "Missing Identifier Parameters in Call").toJS())
             return
         }
         
         // Delete
         do {
-            try delete(service: identifier.service, username: identifier.username)
+            try delete(service: service, username: username)
+            try removeAccount(service: service, username: username)
         } catch let error {
             call.resolve((error as! SecureCredentialsError).toJS())
         }
@@ -188,6 +141,7 @@ public class SecureCredentialsPlugin: CAPPlugin {
         // Delete
         do {
             try delete(service: service)
+            try removeAllAccounts(service: service)
         } catch let error {
             call.resolve((error as! SecureCredentialsError).toJS())
         }
@@ -259,12 +213,12 @@ public class SecureCredentialsPlugin: CAPPlugin {
         return query
     }
     
-    private func save(credential: Credential, options: Options) throws {
+    private func save(service: String, credential: Credential, options: Options) throws {
         
         let query: [String: Any] = applyOptionsToQuery([
             kSecClass as String: kSecClassInternetPassword,
             kSecAttrAccount as String: credential.username,
-            kSecAttrServer as String: credential.service,
+            kSecAttrServer as String: service,
             kSecValueData as String: credential.passwordData
         ], options: options)
         
@@ -274,10 +228,10 @@ public class SecureCredentialsPlugin: CAPPlugin {
         }
     }
     
-    private func update(credential: Credential, options: Options) throws {
+    private func update(service: String, credential: Credential, options: Options) throws {
         
         let searchQuery: [String: Any] = [kSecClass as String: kSecClassInternetPassword,
-                                          kSecAttrServer as String: credential.service,
+                                          kSecAttrServer as String: service,
                                           kSecAttrAccount as String: credential.username
                                     ]
     
@@ -299,7 +253,57 @@ public class SecureCredentialsPlugin: CAPPlugin {
         let status = SecItemDelete(query as CFDictionary)
         guard status == errSecSuccess || status == errSecItemNotFound else { throw SecureCredentialsError.unknown(status: "OSStatus: \(status)") }
     }
+    
+    private let accountsService = "CapacitorSecureCredentials.AccountList"
+    
+    private func addAccount(service: String, username: String) throws {
+        let credentialsService = "\(service).\(accountsService)"
+        try save(service: credentialsService, credential: Credential(username: username, password: username), options: Options(securityLevel: .L1_Encrypted))
+    }
+    
+    private func removeAccount(service: String, username: String) throws {
+        let credentialsService = "\(service).\(accountsService)"
+        try delete(service: credentialsService, username: username)
+    }
+    
+    private func removeAllAccounts(service: String) throws {
+        let credentialsService = "\(service).\(accountsService)"
+        try delete(service: credentialsService)
+    }
+    
+    private func getAccounts(service: String) throws -> [String] {
+        let credentialsService = "\(service).\(accountsService)"
+        let query: [String: Any] = [kSecClass as String: kSecClassInternetPassword,
+                                    kSecAttrServer as String: credentialsService,
+                                    kSecMatchLimit as String: kSecMatchLimitAll,
+                                    kSecReturnAttributes as String: true]
+        
+        var item: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &item)
+        guard status != errSecItemNotFound else {
+            return []
+        }
+        guard status == errSecSuccess else {
+            throw SecureCredentialsError.unknown(status: "OSStatus: \(status)")
+        }
+        
+        guard let existingItem = item as? [[String : Any]]
+        else {
+            throw SecureCredentialsError.unknown(status: "Items stored aren't of the right class: \(item?.description ?? "null")")
+        }
+        
+        let usernames: [String] = existingItem.compactMap({
+            if let username = $0[kSecAttrAccount as String] as? String {
+                return username
+            }
+            return nil
+        })
+        
+        return usernames
+    }
 }
+
+
 
 private protocol JsAble {
     func toJS() -> [String: Any]
@@ -338,52 +342,26 @@ private struct Failure<T> : JsAble {
     }
 }
 
-private struct CredentialIdentifier {
-    let username: String
-    let service: String
-    
-    init(service: String, username: String) {
-        self.service = service
-        self.username = username
-    }
-    
-    init?(jsObject: JSObject?) {
-        guard let service = jsObject?[.kService] as? String else { return nil }
-        guard let username = jsObject?[.kUsername] as? String else { return nil }
-        self.init(service: service, username: username)
-    }
-    
-    init?(fromCall call: CAPPluginCall) {
-        guard let service = call.getString(.kService) else { return nil }
-        guard let username = call.getString(.kUsername) else { return nil }
-        self.init(service: service, username: username)
-    }
-}
-
 private struct Credential : JsAble {
     let username: String
-    let service: String
     let password: String
     
     func toJS() -> [String: Any] {
         return [
             "username" : username,
-            "password" : password,
-            "service" : service
+            "password" : password
         ]
     }
     
-    init(service: String, username: String, password: String) {
-        self.service = service
+    init(username: String, password: String) {
         self.username = username
         self.password = password
     }
     
     init?(jsObject: JSObject?) {
-        guard let service = jsObject?[.kService] as? String else { return nil }
         guard let username = jsObject?[.kUsername] as? String else { return nil }
         guard let password = jsObject?[.kPassword] as? String else { return nil }
-        self.init(service: service, username: username, password: password)
+        self.init(username: username, password: password)
     }
     
     var passwordData: Data {
@@ -454,6 +432,10 @@ private struct Options {
             securityLevel = .L4_Biometrics
         }
     }
+    
+    init(securityLevel: SecurityLevel) {
+        self.securityLevel = securityLevel
+    }
 }
 
 private extension String {
@@ -462,7 +444,6 @@ private extension String {
     static let kPassword = "password"
     static let kOptions = "options"
     static let kSecurityLevel = "securityLevel"
-    static let kMinimumSecurityLevel = "minimumSecurityLevel"
     static let kUsernames = "usernames"
     static let kCredential = "credential"
     static let kCredentials = "credentials"
