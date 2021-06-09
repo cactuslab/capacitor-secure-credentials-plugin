@@ -19,6 +19,7 @@ import java.security.InvalidKeyException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
+import java.security.PrivateKey;
 import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
 
@@ -37,19 +38,21 @@ public class SecureCredentialsPlugin extends Plugin {
     private static final String USERNAME_KEY = "username";
     private static final String PASSWORD_KEY = "password";
     private static final String OPTIONS_KEY = "options";
+    private static final String CREDENTIAL_KEY = "credential";
     private static final String SECURITY_LEVEL_KEY = "securityLevel";
 
-    private final SecureCredentialsHelper helper = new SecureCredentialsHelper(getContext());
+    private final SecureCredentialsHelper helper = new SecureCredentialsHelper();
 
     @PluginMethod
     public void setCredential(PluginCall call) {
         String service = call.getString(SERVICE_KEY);
-        String username = call.getString(USERNAME_KEY);
-        String password = call.getString(PASSWORD_KEY);
+        JSObject credential = call.getObject(CREDENTIAL_KEY);
+        String username = credential.getString(USERNAME_KEY);
+        String password = credential.getString(PASSWORD_KEY);
         JSObject options = call.getObject(OPTIONS_KEY, new JSObject());
         assert options != null;
 
-        SecurityLevel securityLevel = SecurityLevel.valueOf(options.getString(SECURITY_LEVEL_KEY, helper.maximumSupportedLevel().level));
+        SecurityLevel securityLevel = SecurityLevel.get(options.getString(SECURITY_LEVEL_KEY, helper.maximumSupportedLevel(getContext()).level));
 
         call.resolve(setCredential(service, username, password, securityLevel).toJS());
     }
@@ -61,10 +64,10 @@ public class SecureCredentialsPlugin extends Plugin {
         assert service != null;
         assert username != null;
 
-        MetaData metaData = helper.loadMetaData(service, username);
-        Cipher cipher = helper.getCipher(service, username);
-        String encryptedData = helper.getEncryptedData(service, username);
-        if (metaData == null || encryptedData == null || cipher == null) {
+        MetaData metaData = helper.loadMetaData(getContext(), service, username);
+        PrivateKey key = helper.getPrivateKey(getContext(), service, username);
+        String encryptedData = helper.getEncryptedData(getContext(), service, username);
+        if (metaData == null || encryptedData == null || key == null) {
             call.resolve(SecureCredentialsResult.errorResult(SecureCredentialsError.noData).toJS());
             return;
         }
@@ -86,16 +89,16 @@ public class SecureCredentialsPlugin extends Plugin {
     @PluginMethod
     public void getUsernames(PluginCall call) {
         String service = call.getString(SERVICE_KEY);
-        String[] accounts = helper.usernamesForService(service);
+        String[] accounts = helper.usernamesForService(getContext(), service);
         call.resolve((new SecureCredentialsResult<>(true, accounts)).toJS());
     }
 
     @PluginMethod
-    void removeCredential(PluginCall call) {
+    public void removeCredential(PluginCall call) {
         String service = call.getString(SERVICE_KEY);
         String username = call.getString(USERNAME_KEY);
         try {
-            helper.removeCredential(service, username);
+            helper.removeCredential(getContext(), service, username);
             call.resolve(SecureCredentialsResult.successResult.toJS());
         } catch (KeyStoreException e) {
             call.resolve(SecureCredentialsResult.errorResult(SecureCredentialsError.unknown("error: " + e)).toJS());
@@ -103,10 +106,10 @@ public class SecureCredentialsPlugin extends Plugin {
     }
 
     @PluginMethod
-    void removeCredentials(PluginCall call) {
+    public void removeCredentials(PluginCall call) {
         String service = call.getString(SERVICE_KEY);
         try {
-            helper.removeCredentials(service);
+            helper.removeCredentials(getContext(), service);
             call.resolve(SecureCredentialsResult.successResult.toJS());
         } catch (KeyStoreException e) {
             call.resolve(SecureCredentialsResult.errorResult(SecureCredentialsError.unknown("error: " + e)).toJS());
@@ -114,15 +117,20 @@ public class SecureCredentialsPlugin extends Plugin {
     }
 
     @PluginMethod
-    void canUseSecurityLevel(PluginCall call) {
+    public void canUseSecurityLevel(PluginCall call) {
         String levelString = call.getString(SECURITY_LEVEL_KEY);
         if (levelString == null) {
             call.resolve(SecureCredentialsResult.errorResult(SecureCredentialsError.unknown("Missing parameters")).toJS());
             return;
         }
 
-        SecurityLevel queryLevel = SecurityLevel.valueOf(levelString);
-        SecurityLevel max = helper.maximumSupportedLevel();
+        SecurityLevel queryLevel = SecurityLevel.get(levelString);
+        if (queryLevel == null) {
+            call.resolve(SecureCredentialsResult.errorResult(SecureCredentialsError.unknown("Unknown Security level")).toJS());
+            return;
+        }
+
+        SecurityLevel max = helper.maximumSupportedLevel(getContext());
         if (max.comparisonValue >= queryLevel.comparisonValue) {
             call.resolve(SecureCredentialsResult.successResult.toJS());
         } else {
@@ -131,15 +139,15 @@ public class SecureCredentialsPlugin extends Plugin {
     }
 
     @PluginMethod
-    void maximumAllowedSecurityLevel(PluginCall call) {
-        SecurityLevel max = helper.maximumSupportedLevel();
+    public void maximumAllowedSecurityLevel(PluginCall call) {
+        SecurityLevel max = helper.maximumSupportedLevel(getContext());
         call.resolve((new SecureCredentialsResult<>(true, max.level)).toJS());
     }
 
     private void startBiometric(final PluginCall call, String service, String username) {
         Intent intent = new Intent(getContext(), AuthActivity.class);
-        intent.putExtra(SERVICE_KEY, service);
-        intent.putExtra(USERNAME_KEY, username);
+        intent.putExtra(AuthActivity.SERVICE_KEY, service);
+        intent.putExtra(AuthActivity.USERNAME_KEY, username);
 
         String title = call.getString(AuthActivity.TITLE_KEY);
         if (title != null) {
@@ -172,7 +180,10 @@ public class SecureCredentialsPlugin extends Plugin {
 
         if (result.getResultCode() == RESULT_OK && result.getData() != null) {
             String data = result.getData().getStringExtra("result");
-            call.resolve((new SecureCredentialsResult<>(true,data)).toJS());
+            JSObject credential = new JSObject();
+            credential.put(USERNAME_KEY, call.getString(USERNAME_KEY));
+            credential.put(PASSWORD_KEY, data);
+            call.resolve((new SecureCredentialsResult<>(true,credential)).toJS());
         } else if (result.getResultCode() == RESULT_CANCELED) {
             call.resolve(SecureCredentialsResult.errorResult(SecureCredentialsError.failedToAccess).toJS());
         } else {
@@ -181,8 +192,9 @@ public class SecureCredentialsPlugin extends Plugin {
     }
 
     public JsAble getCredential(String service, String username) {
-        Cipher cipher = helper.getCipher(service, username);
-        String encryptedData = helper.getEncryptedData(service, username);
+        PrivateKey privateKey = helper.getPrivateKey(getContext(), service, username);
+        Cipher cipher = helper.getCipher(privateKey);
+        String encryptedData = helper.getEncryptedData(getContext(), service, username);
         try {
             String result = helper.decryptString(cipher, encryptedData);
             if (result != null) {
@@ -202,14 +214,14 @@ public class SecureCredentialsPlugin extends Plugin {
         }
 
         try {
-            helper.createKey(service, username, securityLevel);
+            helper.createKey(getContext(), service, username, securityLevel);
         } catch (NoSuchProviderException | NoSuchAlgorithmException | InvalidAlgorithmParameterException | JSONException e) {
             e.printStackTrace();
             return SecureCredentialsResult.errorResult(SecureCredentialsError.unknown("error: " + e));
         }
 
         try {
-            helper.setData(service, username, password);
+            helper.setData(getContext(), service, username, password);
         } catch (KeyStoreException | CertificateException | IOException | NoSuchPaddingException | IllegalBlockSizeException | BadPaddingException | NoSuchProviderException | InvalidKeyException | InvalidKeySpecException | NoSuchAlgorithmException e) {
             e.printStackTrace();
             return SecureCredentialsResult.errorResult(SecureCredentialsError.unknown("error: " + e));

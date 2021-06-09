@@ -14,7 +14,7 @@ public class MetaData {
     }
 
     MetaData(JSONObject jsonObject) throws JSONException {
-        this.securityLevel = SecurityLevel.valueOf(jsonObject.getString(SECURITY_LEVEL_KEY));
+        this.securityLevel = SecurityLevel.get(jsonObject.getString(SECURITY_LEVEL_KEY));
     }
 
     JSONObject asJson() throws JSONException {

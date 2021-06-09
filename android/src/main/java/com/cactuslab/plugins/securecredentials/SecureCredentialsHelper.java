@@ -57,11 +57,9 @@ public class SecureCredentialsHelper {
     private static final String TAG = "SecureCredentialsHelper";
     private static final String METADATA_KEY = ".SecureCredentialsHelper";
 
-    private final Context context;
     private KeyStore ks;
 
-    SecureCredentialsHelper(Context context) {
-        this.context = context;
+    SecureCredentialsHelper() {
         try {
             ks = KeyStore.getInstance(KEYSTORE_PROVIDER_ANDROID_KEYSTORE);
             //Use null to load Keystore with default parameters.
@@ -71,14 +69,14 @@ public class SecureCredentialsHelper {
         }
     }
 
-    private String alias(@NonNull String service, @NonNull String username) {
+    private String alias(Context context, @NonNull String service, @NonNull String username) {
         return context.getPackageName() + "." + service + "." + username;
     }
 
-    public void createKey(@NonNull String service, @NonNull String username, @NonNull SecurityLevel securityLevel) throws NoSuchProviderException, NoSuchAlgorithmException, InvalidAlgorithmParameterException, JSONException {
-        String alias = alias(service, username);
+    public void createKey(Context context, @NonNull String service, @NonNull String username, @NonNull SecurityLevel securityLevel) throws NoSuchProviderException, NoSuchAlgorithmException, InvalidAlgorithmParameterException, JSONException {
+        String alias = alias(context, service, username);
 
-        if (isKeyAvailable(service, username)) {
+        if (isKeyAvailable(context, service, username)) {
             try {
                 ks.deleteEntry(alias);
             } catch (KeyStoreException e) {
@@ -135,13 +133,13 @@ public class SecureCredentialsHelper {
         // Generate private/public keys
         kpGenerator.generateKeyPair();
 
-        Log.i(TAG, "New key created. IsHardwareBacked? " + isKeyHardwareBacked(service, username));
-        saveMetaData(service, username, new MetaData(securityLevel));
+        Log.i(TAG, "New key created. IsHardwareBacked? " + isKeyHardwareBacked(context, service, username));
+        saveMetaData(context, service, username, new MetaData(securityLevel));
     }
 
     // Check if device support Hardware-backed keystore
-    public boolean isKeyHardwareBacked(@NonNull String service, @NonNull String username) {
-        String alias = alias(service, username);
+    public boolean isKeyHardwareBacked(Context context, @NonNull String service, @NonNull String username) {
+        String alias = alias(context, service, username);
         try {
             PrivateKey privateKey = (PrivateKey) ks.getKey(alias, null);
             KeyChain.isBoundKeyAlgorithm(KeyProperties.KEY_ALGORITHM_RSA);
@@ -156,8 +154,8 @@ public class SecureCredentialsHelper {
         }
     }
 
-    public boolean isKeyAvailable(@NonNull String service, @NonNull String username) {
-        String alias = alias(service, username);
+    public boolean isKeyAvailable(Context context, @NonNull String service, @NonNull String username) {
+        String alias = alias(context, service, username);
 
         try {
             // Check if Private and Public already keys exists
@@ -176,7 +174,7 @@ public class SecureCredentialsHelper {
         return false;
     }
 
-    public SecurityLevel maximumSupportedLevel() {
+    public SecurityLevel maximumSupportedLevel(Context context) {
         BiometricManager biometricManager = BiometricManager.from(context);
         switch (biometricManager.canAuthenticate(BIOMETRIC_STRONG | DEVICE_CREDENTIAL)) {
             case BiometricManager.BIOMETRIC_SUCCESS:
@@ -207,7 +205,7 @@ public class SecureCredentialsHelper {
         return SecurityLevel.L1_ENCRYPTED;
     }
 
-    public String[] usernamesForService(@Nullable String service) {
+    public String[] usernamesForService(Context context, @Nullable String service) {
         if (service == null) {
             return new String[0];
         }
@@ -215,13 +213,13 @@ public class SecureCredentialsHelper {
         return preferences.getAll().keySet().toArray(new String[0]);
     }
 
-    public void removeCredential(@Nullable String service, @Nullable String username) throws KeyStoreException {
+    public void removeCredential(Context context, @Nullable String service, @Nullable String username) throws KeyStoreException {
         if (service == null || username == null) {
             return;
         }
 
-        String alias = alias(service, username);
-        if (isKeyAvailable(service, username)) {
+        String alias = alias(context, service, username);
+        if (isKeyAvailable(context, service, username)) {
             ks.deleteEntry(alias);
         }
 
@@ -229,15 +227,15 @@ public class SecureCredentialsHelper {
         context.getSharedPreferences(service + METADATA_KEY, Context.MODE_PRIVATE).edit().remove(username).apply();
     }
 
-    public void removeCredentials(@Nullable String service) throws KeyStoreException {
+    public void removeCredentials(Context context, @Nullable String service) throws KeyStoreException {
         if (service == null) {
             return;
         }
 
-        String[] usernames = usernamesForService(service);
+        String[] usernames = usernamesForService(context, service);
         for (String username : usernames) {
-            String alias = alias(service, username);
-            if (isKeyAvailable(service, username)) {
+            String alias = alias(context, service, username);
+            if (isKeyAvailable(context, service, username)) {
                 ks.deleteEntry(alias);
             }
         }
@@ -251,12 +249,12 @@ public class SecureCredentialsHelper {
         }
     }
 
-    public void setData(@NonNull String service, @NonNull String username, @NonNull String password) throws KeyStoreException, CertificateException, NoSuchAlgorithmException, IOException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, NoSuchProviderException, InvalidKeyException, InvalidKeySpecException {
-        setData(service, username, password.getBytes());
+    public void setData(Context context, @NonNull String service, @NonNull String username, @NonNull String password) throws KeyStoreException, CertificateException, NoSuchAlgorithmException, IOException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, NoSuchProviderException, InvalidKeyException, InvalidKeySpecException {
+        setData(context, service, username, password.getBytes());
     }
 
-    public void setData(@NonNull String service, @NonNull String username, @NonNull byte[] data) throws KeyStoreException, CertificateException, NoSuchAlgorithmException, IOException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, NoSuchProviderException, InvalidKeyException, InvalidKeySpecException {
-        String alias = alias(service, username);
+    public void setData(Context context, @NonNull String service, @NonNull String username, @NonNull byte[] data) throws KeyStoreException, CertificateException, NoSuchAlgorithmException, IOException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, NoSuchProviderException, InvalidKeyException, InvalidKeySpecException {
+        String alias = alias(context, service, username);
 
         ks.load(null);
         if (ks.getCertificate(alias) == null) return;
@@ -309,7 +307,7 @@ public class SecureCredentialsHelper {
         }
     }
 
-    private void saveMetaData(@NonNull String service, @NonNull String username, @NonNull MetaData data) throws JSONException {
+    private void saveMetaData(Context context, @NonNull String service, @NonNull String username, @NonNull MetaData data) throws JSONException {
         SharedPreferences pSharedPref = context.getSharedPreferences(service + METADATA_KEY, Context.MODE_PRIVATE);
         if (pSharedPref != null){
             String jsonString = data.asJson().toString();
@@ -320,7 +318,7 @@ public class SecureCredentialsHelper {
     }
 
     @Nullable
-    public MetaData loadMetaData(@NonNull String service, @NonNull String username) {
+    public MetaData loadMetaData(Context context, @NonNull String service, @NonNull String username) {
         SharedPreferences pSharedPref = context.getSharedPreferences(service + METADATA_KEY, Context.MODE_PRIVATE);
         try{
             if (pSharedPref != null){
@@ -335,23 +333,32 @@ public class SecureCredentialsHelper {
     }
 
     @Nullable
-    public String getEncryptedData(String service, String username) {
+    public String getEncryptedData(Context context, String service, String username) {
         SharedPreferences preferences = context.getSharedPreferences(service, Context.MODE_PRIVATE);
         return preferences.getString(username, null);
     }
 
     @Nullable
-    public Cipher getCipher(@NonNull String service, @NonNull String username) {
-        String alias = alias(service, username);
+    public Cipher getCipher(PrivateKey key) {
+        try {
+            Cipher cipher = Cipher.getInstance(RSA_ECB_PKCS1_PADDING);
+            cipher.init(Cipher.DECRYPT_MODE, key);
+            return cipher;
+        } catch (NoSuchAlgorithmException | InvalidKeyException | NoSuchPaddingException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    @Nullable
+    public PrivateKey getPrivateKey(Context context, @NonNull String service, @NonNull String username) {
+        String alias = alias(context, service, username);
         try {
             ks = KeyStore.getInstance(KEYSTORE_PROVIDER_ANDROID_KEYSTORE);
             ks.load(null);
-            PrivateKey privateKey = (PrivateKey) ks.getKey(alias, null);
-            Cipher cipher = Cipher.getInstance(RSA_ECB_PKCS1_PADDING);
-            cipher.init(Cipher.DECRYPT_MODE, privateKey);
-            return cipher;
+            return (PrivateKey) ks.getKey(alias, null);
         } catch (KeyStoreException | NoSuchAlgorithmException | CertificateException | IOException
-                | UnrecoverableEntryException | InvalidKeyException | NoSuchPaddingException e) {
+                | UnrecoverableEntryException e) {
             e.printStackTrace();
         }
         return null;

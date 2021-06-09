@@ -1,5 +1,6 @@
 package com.cactuslab.plugins.securecredentials;
 
+import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
@@ -42,26 +43,30 @@ public class AuthActivity extends AppCompatActivity {
 
         // Search the intent for the service and username. Use that to get the crypto object to authenticate
 
-        SecureCredentialsHelper helper = new SecureCredentialsHelper(this);
+        SecureCredentialsHelper helper = new SecureCredentialsHelper();
         String service = getIntent().getStringExtra(SERVICE_KEY);
         String username = getIntent().getStringExtra(USERNAME_KEY);
 
-        MetaData metaData = helper.loadMetaData(service, username);
+        MetaData metaData = helper.loadMetaData(this, service, username);
 
-        int allowedAuthenticators = BiometricManager.Authenticators.BIOMETRIC_STRONG;
-        if (metaData != null && metaData.securityLevel == SecurityLevel.L3_USER_PRESENCE) {
-            allowedAuthenticators = allowedAuthenticators | BiometricManager.Authenticators.DEVICE_CREDENTIAL;
-        }
         // The successful result will be the decrypted String value
         executor = ContextCompat.getMainExecutor(this);
 
-        promptInfo = new BiometricPrompt.PromptInfo.Builder()
+        Context context = this;
+
+        BiometricPrompt.PromptInfo.Builder promptInfoBuilder = new BiometricPrompt.PromptInfo.Builder()
                 .setTitle(getIntent().hasExtra(TITLE_KEY) ? getIntent().getStringExtra(TITLE_KEY) : "Authenticate")
                 .setSubtitle(getIntent().hasExtra(SUBTITLE_KEY) ? getIntent().getStringExtra(SUBTITLE_KEY) : null)
-                .setDescription(getIntent().hasExtra(DESCRIPTION_KEY) ? getIntent().getStringExtra(DESCRIPTION_KEY) : null)
-                .setNegativeButtonText(getIntent().hasExtra(NEGATIVE_BUTTON_KEY) ? getIntent().getStringExtra(NEGATIVE_BUTTON_KEY) : "Cancel")
-                .setAllowedAuthenticators(allowedAuthenticators)
-                .build();
+                .setDescription(getIntent().hasExtra(DESCRIPTION_KEY) ? getIntent().getStringExtra(DESCRIPTION_KEY) : null);
+
+        if (metaData != null && metaData.securityLevel == SecurityLevel.L3_USER_PRESENCE) {
+            promptInfoBuilder.setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG | BiometricManager.Authenticators.DEVICE_CREDENTIAL);
+        } else {
+            promptInfoBuilder.setNegativeButtonText(getIntent().hasExtra(NEGATIVE_BUTTON_KEY) ? getIntent().getStringExtra(NEGATIVE_BUTTON_KEY) : "Cancel");
+            promptInfoBuilder.setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG);
+        }
+
+        promptInfo = promptInfoBuilder.build();
 
         biometricPrompt = new BiometricPrompt(this, executor, new BiometricPrompt.AuthenticationCallback() {
             @Override
@@ -73,8 +78,9 @@ public class AuthActivity extends AppCompatActivity {
             @Override
             public void onAuthenticationSucceeded(@NonNull BiometricPrompt.AuthenticationResult result) {
                 try {
-                    Cipher cipher = helper.getCipher(service, username);
-                    String decryptedString = helper.decryptString(cipher, helper.getEncryptedData(service, username));
+                    PrivateKey key = helper.getPrivateKey(context, service, username);
+                    Cipher cipher = helper.getCipher(key);
+                    String decryptedString = helper.decryptString(cipher, helper.getEncryptedData(context, service, username));
                     finishActivity(RESULT_OK, decryptedString);
                 } catch (BadPaddingException | IllegalBlockSizeException e) {
                     e.printStackTrace();
