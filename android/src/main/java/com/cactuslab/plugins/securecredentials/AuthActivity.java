@@ -7,6 +7,7 @@ import android.os.Handler;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.biometric.BiometricManager;
 import androidx.biometric.BiometricPrompt;
 import androidx.core.content.ContextCompat;
 
@@ -25,6 +26,11 @@ public class AuthActivity extends AppCompatActivity {
     public static final String SERVICE_KEY = "secureCredentials.SERVICE";
     public static final String USERNAME_KEY = "secureCredentials.USERNAME";
 
+    public static final String TITLE_KEY = "title";
+    public static final String SUBTITLE_KEY = "subtitle";
+    public static final String DESCRIPTION_KEY = "description";
+    public static final String NEGATIVE_BUTTON_KEY = "negativeButtonText";
+
     private Executor executor;
     private BiometricPrompt.PromptInfo promptInfo;
     private BiometricPrompt biometricPrompt;
@@ -36,19 +42,25 @@ public class AuthActivity extends AppCompatActivity {
 
         // Search the intent for the service and username. Use that to get the crypto object to authenticate
 
-        SecureCredentials.PasswordStorageHelper creds = new SecureCredentials.PasswordStorageHelper(this);
+        SecureCredentialsHelper helper = new SecureCredentialsHelper(this);
         String service = getIntent().getStringExtra(SERVICE_KEY);
         String username = getIntent().getStringExtra(USERNAME_KEY);
 
+        MetaData metaData = helper.loadMetaData(service, username);
 
+        int allowedAuthenticators = BiometricManager.Authenticators.BIOMETRIC_STRONG;
+        if (metaData != null && metaData.securityLevel == SecurityLevel.L3_USER_PRESENCE) {
+            allowedAuthenticators = allowedAuthenticators | BiometricManager.Authenticators.DEVICE_CREDENTIAL;
+        }
         // The successful result will be the decrypted String value
         executor = ContextCompat.getMainExecutor(this);
 
         promptInfo = new BiometricPrompt.PromptInfo.Builder()
-                .setTitle(getIntent().hasExtra("title") ? getIntent().getStringExtra("title") : "Authenticate")
-                .setSubtitle(getIntent().hasExtra("subtitle") ? getIntent().getStringExtra("subtitle") : null)
-                .setDescription(getIntent().hasExtra("description") ? getIntent().getStringExtra("description") : null)
-                .setNegativeButtonText(getIntent().hasExtra("negativeButtonText") ? getIntent().getStringExtra("negativeButtonText") : "Cancel")
+                .setTitle(getIntent().hasExtra(TITLE_KEY) ? getIntent().getStringExtra(TITLE_KEY) : "Authenticate")
+                .setSubtitle(getIntent().hasExtra(SUBTITLE_KEY) ? getIntent().getStringExtra(SUBTITLE_KEY) : null)
+                .setDescription(getIntent().hasExtra(DESCRIPTION_KEY) ? getIntent().getStringExtra(DESCRIPTION_KEY) : null)
+                .setNegativeButtonText(getIntent().hasExtra(NEGATIVE_BUTTON_KEY) ? getIntent().getStringExtra(NEGATIVE_BUTTON_KEY) : "Cancel")
+                .setAllowedAuthenticators(allowedAuthenticators)
                 .build();
 
         biometricPrompt = new BiometricPrompt(this, executor, new BiometricPrompt.AuthenticationCallback() {
@@ -61,10 +73,9 @@ public class AuthActivity extends AppCompatActivity {
             @Override
             public void onAuthenticationSucceeded(@NonNull BiometricPrompt.AuthenticationResult result) {
                 try {
-                    Cipher cipher = creds.getCipher(service, username);
-
-                    byte[] decryptedInfo = SecureCredentials.PasswordStorageHelper.decrypt(cipher, creds.getEncryptedData(service, username));
-                    finishActivity(RESULT_OK, new String(decryptedInfo));
+                    Cipher cipher = helper.getCipher(service, username);
+                    String decryptedString = helper.decryptString(cipher, helper.getEncryptedData(service, username));
+                    finishActivity(RESULT_OK, decryptedString);
                 } catch (BadPaddingException | IllegalBlockSizeException e) {
                     e.printStackTrace();
                     finishActivity(RESULT_CANCELED, "");
@@ -79,8 +90,6 @@ public class AuthActivity extends AppCompatActivity {
         });
 
         biometricPrompt.authenticate(promptInfo);
-
-
     }
 
     void finishActivity(int resultCode, String result) {

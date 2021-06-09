@@ -12,7 +12,11 @@ import android.util.Base64;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.biometric.BiometricManager;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -26,6 +30,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.security.UnrecoverableEntryException;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.security.spec.AlgorithmParameterSpec;
@@ -50,7 +55,7 @@ public class SecureCredentialsHelper {
     private static final String KEYSTORE_PROVIDER_ANDROID_KEYSTORE = "AndroidKeyStore";
     private static final String RSA_ECB_PKCS1_PADDING = "RSA/ECB/PKCS1Padding";
     private static final String TAG = "SecureCredentialsHelper";
-
+    private static final String METADATA_KEY = ".SecureCredentialsHelper";
 
     private final Context context;
     private KeyStore ks;
@@ -70,7 +75,7 @@ public class SecureCredentialsHelper {
         return context.getPackageName() + "." + service + "." + username;
     }
 
-    public void createKey(@NonNull String service, @NonNull String username, @NonNull SecurityLevel securityLevel) throws NoSuchProviderException, NoSuchAlgorithmException, InvalidAlgorithmParameterException {
+    public void createKey(@NonNull String service, @NonNull String username, @NonNull SecurityLevel securityLevel) throws NoSuchProviderException, NoSuchAlgorithmException, InvalidAlgorithmParameterException, JSONException {
         String alias = alias(service, username);
 
         if (isKeyAvailable(service, username)) {
@@ -131,6 +136,7 @@ public class SecureCredentialsHelper {
         kpGenerator.generateKeyPair();
 
         Log.i(TAG, "New key created. IsHardwareBacked? " + isKeyHardwareBacked(service, username));
+        saveMetaData(service, username, new MetaData(securityLevel));
     }
 
     // Check if device support Hardware-backed keystore
@@ -201,11 +207,54 @@ public class SecureCredentialsHelper {
         return SecurityLevel.L1_ENCRYPTED;
     }
 
+    public String[] usernamesForService(@Nullable String service) {
+        if (service == null) {
+            return new String[0];
+        }
+        SharedPreferences preferences = context.getSharedPreferences(service, Context.MODE_PRIVATE);
+        return preferences.getAll().keySet().toArray(new String[0]);
+    }
+
+    public void removeCredential(@Nullable String service, @Nullable String username) throws KeyStoreException {
+        if (service == null || username == null) {
+            return;
+        }
+
+        String alias = alias(service, username);
+        if (isKeyAvailable(service, username)) {
+            ks.deleteEntry(alias);
+        }
+
+        context.getSharedPreferences(service, Context.MODE_PRIVATE).edit().remove(username).apply();
+        context.getSharedPreferences(service + METADATA_KEY, Context.MODE_PRIVATE).edit().remove(username).apply();
+    }
+
+    public void removeCredentials(@Nullable String service) throws KeyStoreException {
+        if (service == null) {
+            return;
+        }
+
+        String[] usernames = usernamesForService(service);
+        for (String username : usernames) {
+            String alias = alias(service, username);
+            if (isKeyAvailable(service, username)) {
+                ks.deleteEntry(alias);
+            }
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            context.deleteSharedPreferences(service);
+            context.deleteSharedPreferences(service + METADATA_KEY);
+        } else {
+            context.getSharedPreferences(service, Context.MODE_PRIVATE).edit().clear().apply();
+            context.getSharedPreferences(service + METADATA_KEY, Context.MODE_PRIVATE).edit().clear().apply();
+        }
+    }
+
     public void setData(@NonNull String service, @NonNull String username, @NonNull String password) throws KeyStoreException, CertificateException, NoSuchAlgorithmException, IOException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, NoSuchProviderException, InvalidKeyException, InvalidKeySpecException {
         setData(service, username, password.getBytes());
     }
 
-    @SuppressLint("ApplySharedPref")
     public void setData(@NonNull String service, @NonNull String username, @NonNull byte[] data) throws KeyStoreException, CertificateException, NoSuchAlgorithmException, IOException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, NoSuchProviderException, InvalidKeyException, InvalidKeySpecException {
         String alias = alias(service, username);
 
@@ -225,7 +274,7 @@ public class SecureCredentialsHelper {
         SharedPreferences.Editor editor = preferences.edit();
 
         editor.putString(username, value);
-        editor.commit();
+        editor.apply();
     }
 
     @SuppressLint("TrulyRandom")
@@ -258,6 +307,91 @@ public class SecureCredentialsHelper {
 
             return Base64.encodeToString(byteArrayOutputStream.toByteArray(), Base64.DEFAULT);
         }
+    }
+
+    private void saveMetaData(@NonNull String service, @NonNull String username, @NonNull MetaData data) throws JSONException {
+        SharedPreferences pSharedPref = context.getSharedPreferences(service + METADATA_KEY, Context.MODE_PRIVATE);
+        if (pSharedPref != null){
+            String jsonString = data.asJson().toString();
+            SharedPreferences.Editor editor = pSharedPref.edit();
+            editor.putString(username, jsonString);
+            editor.apply();
+        }
+    }
+
+    @Nullable
+    public MetaData loadMetaData(@NonNull String service, @NonNull String username) {
+        SharedPreferences pSharedPref = context.getSharedPreferences(service + METADATA_KEY, Context.MODE_PRIVATE);
+        try{
+            if (pSharedPref != null){
+                String jsonString = pSharedPref.getString(username, (new JSONObject()).toString());
+                JSONObject jsonObject = new JSONObject(jsonString);
+                return new MetaData(jsonObject);
+            }
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    @Nullable
+    public String getEncryptedData(String service, String username) {
+        SharedPreferences preferences = context.getSharedPreferences(service, Context.MODE_PRIVATE);
+        return preferences.getString(username, null);
+    }
+
+    @Nullable
+    public Cipher getCipher(@NonNull String service, @NonNull String username) {
+        String alias = alias(service, username);
+        try {
+            ks = KeyStore.getInstance(KEYSTORE_PROVIDER_ANDROID_KEYSTORE);
+            ks.load(null);
+            PrivateKey privateKey = (PrivateKey) ks.getKey(alias, null);
+            Cipher cipher = Cipher.getInstance(RSA_ECB_PKCS1_PADDING);
+            cipher.init(Cipher.DECRYPT_MODE, privateKey);
+            return cipher;
+        } catch (KeyStoreException | NoSuchAlgorithmException | CertificateException | IOException
+                | UnrecoverableEntryException | InvalidKeyException | NoSuchPaddingException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    @Nullable
+    byte[] decrypt(@Nullable Cipher cipher, @Nullable String encryptedData) throws BadPaddingException, IllegalBlockSizeException {
+        if (encryptedData == null || cipher == null)
+            return null;
+        byte[] encryptedBuffer = Base64.decode(encryptedData, Base64.DEFAULT);
+
+        if (encryptedBuffer.length <= KEY_LENGTH / 8) {
+            return cipher.doFinal(encryptedBuffer);
+        } else {
+            int limit = KEY_LENGTH / 8;
+            int position = 0;
+            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+            while (position < encryptedBuffer.length) {
+                if (encryptedBuffer.length - position < limit)
+                    limit = encryptedBuffer.length - position;
+                byte[] tmpData = cipher.doFinal(encryptedBuffer, position, limit);
+                try {
+                    byteArrayOutputStream.write(tmpData);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                position += limit;
+            }
+
+            return byteArrayOutputStream.toByteArray();
+        }
+    }
+
+    @Nullable
+    String decryptString(@Nullable Cipher cipher, @Nullable String encryptedData) throws BadPaddingException, IllegalBlockSizeException {
+        byte[] data = decrypt(cipher, encryptedData);
+        if (data != null) {
+            return new String(data);
+        }
+        return null;
     }
 
 }

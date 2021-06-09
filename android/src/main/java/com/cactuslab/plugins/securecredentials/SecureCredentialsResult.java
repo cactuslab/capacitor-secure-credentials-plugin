@@ -2,6 +2,7 @@ package com.cactuslab.plugins.securecredentials;
 
 import androidx.annotation.Nullable;
 
+import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 
 public class SecureCredentialsResult<T> implements JsAble {
@@ -28,6 +29,8 @@ public class SecureCredentialsResult<T> implements JsAble {
             if (result != null) {
                 if (result instanceof JsAble) {
                     container.put(RESULT_KEY, ((JsAble) result).toJS());
+                } else if (result.getClass().isArray()) {
+                    container.put(RESULT_KEY, JSArray.from(result));
                 } else {
                     container.put(RESULT_KEY, result);
                 }
