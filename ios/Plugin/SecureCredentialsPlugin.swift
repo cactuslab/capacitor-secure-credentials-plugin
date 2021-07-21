@@ -32,6 +32,7 @@ public class SecureCredentialsPlugin: CAPPlugin {
             do {
                 try save(service: service, credential: credential, options: options)
                 try addAccount(service: service, username: credential.username)
+                call.resolve(Success(result: true).toJS())
             } catch let error {
                 call.resolve((error as! SecureCredentialsError).toJS())
             }
@@ -47,6 +48,7 @@ public class SecureCredentialsPlugin: CAPPlugin {
                 try removeAccount(service: service, username: credential.username)
                 try save(service: service, credential: credential, options: options)
                 try addAccount(service: service, username: credential.username)
+                call.resolve(Success(result: true).toJS())
             } catch let error {
                 call.resolve((error as! SecureCredentialsError).toJS())
             }
@@ -60,6 +62,8 @@ public class SecureCredentialsPlugin: CAPPlugin {
         // Update
         do {
             try update(service: service, credential: credential, options: options)
+            call.resolve(Success(result: true).toJS())
+            return
         } catch let error {
             call.resolve((error as! SecureCredentialsError).toJS())
         }
