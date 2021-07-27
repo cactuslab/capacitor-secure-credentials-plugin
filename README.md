@@ -1,6 +1,6 @@
 # capacitor-secure-credentials-plugin
 
-Saves credentials in a secure way
+Saves credentials using secure native technology (Keychain on iOS and Android), with configurable protection levels from simply encrypted, device unlocked, user presence, to user presence proved with biometrics.
 
 ## Install
 
