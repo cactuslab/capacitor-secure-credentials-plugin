@@ -9,13 +9,8 @@ export enum SecurityLevel {
 export interface Credential {
     username: string;
     password: string;
-    // service: string;
 }
 
-// export interface CredentialSecret {
-//     username: string;
-//     password: string;
-// }
 export interface Success<T> {
     success: true;
     result: T;
