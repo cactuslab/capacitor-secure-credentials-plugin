@@ -1,4 +1,4 @@
-export default {
+module.exports = {
   input: 'dist/esm/index.js',
   output: [
     {
