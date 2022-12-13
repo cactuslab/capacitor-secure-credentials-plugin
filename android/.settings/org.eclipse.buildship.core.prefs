@@ -1,2 +1,13 @@
-connection.project.dir=../../umbrella-org-nz/react/android
+arguments=--init-script /var/folders/n8/0zgbrzvd1n7dk5lkv1k3xw180000gn/T/init10459852674331132855.gradle --init-script /var/folders/n8/0zgbrzvd1n7dk5lkv1k3xw180000gn/T/init16839349020190608813.gradle
+auto.sync=false
+build.scans.enabled=false
+connection.gradle.distribution=GRADLE_DISTRIBUTION(WRAPPER)
+connection.project.dir=
 eclipse.preferences.version=1
+gradle.user.home=
+java.home=/Library/Java/JavaVirtualMachines/temurin-11.jdk/Contents/Home
+jvm.arguments=
+offline.mode=false
+override.workspace.settings=true
+show.console.view=true
+show.executions.view=true
