@@ -13,7 +13,7 @@ public class SecureCredentialsPlugin: CAPPlugin {
         guard let service = call.getString(.kService),
               let credential = Credential(jsObject: call.getObject(.kCredential))
         else {
-            call.resolve(Failure(error: SecureCredentialsError.unknown(status: "Missing Credential Parameters")).toJS())
+            call.resolve(Failure(error: SecureCredentialsError.params(message: "service and or credentials missing")).toJS())
             return
         }
         
@@ -75,7 +75,7 @@ public class SecureCredentialsPlugin: CAPPlugin {
         guard let service = call.getString(.kService),
               let username = call.getString(.kUsername)
         else {
-            call.resolve(Failure(error: SecureCredentialsError.unknown(status: "Missing Identifier Parameters in Call")).toJS())
+            call.resolve(Failure(error: SecureCredentialsError.params(message: "service and or username missing")).toJS())
             return
         }
         
@@ -123,7 +123,7 @@ public class SecureCredentialsPlugin: CAPPlugin {
         guard let service = call.getString(.kService),
               let username = call.getString(.kUsername)
         else {
-            call.resolve(Failure(error: SecureCredentialsError.unknown(status: "Missing Identifier Parameters in Call")).toJS())
+            call.resolve(Failure(error: SecureCredentialsError.params(message: "service and or username missing")).toJS())
             return
         }
         
@@ -154,7 +154,7 @@ public class SecureCredentialsPlugin: CAPPlugin {
     
     @objc func canUseSecurityLevel(_ call: CAPPluginCall) {
         guard let securityLevel = SecurityLevel(rawValue: call.getString(.kSecurityLevel, "")) else {
-            call.resolve(Failure(error: SecureCredentialsError.unknown(status: "We didn't understand the security level: \(call.getString(.kSecurityLevel, ""))")).toJS())
+            call.resolve(Failure(error: SecureCredentialsError.params(message: "Invalid security level: \(call.getString(.kSecurityLevel, ""))")).toJS())
             return
         }
         
@@ -385,6 +385,7 @@ private enum SecureCredentialsError: Error, JsAble {
     case failedToAccess
     case noData
     case unavailable(message: String)
+    case params(message: String)
     case unknown(status: String)
     
     private var jsCode: String {
@@ -393,6 +394,7 @@ private enum SecureCredentialsError: Error, JsAble {
         case .noData: return "no data"
         case .unknown: return "unknown"
         case .unavailable: return "unavailable"
+        case .params: return "params"
         }
     }
     
@@ -402,6 +404,7 @@ private enum SecureCredentialsError: Error, JsAble {
         case .noData: return "The credentials don't yet exist"
         case .unavailable(let message): return message
         case .unknown(let status): return "Something went wrong 😱: \(status)"
+        case .params(let message): return "Invalid parameters: \(message)"
         }
     }
     

@@ -193,7 +193,7 @@ This may change over the course of an application's lifetime as users may add or
 
 #### errorCode
 
-<code>'failedToAccess' | 'no data' | 'unknown'</code>
+<code>'failedToAccess' | 'no data' | 'unknown' | 'unavailable' | 'params'</code>
 
 
 ### Enums

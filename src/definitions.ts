@@ -1,4 +1,4 @@
-type errorCode = 'failedToAccess' | 'no data' | 'unknown';
+type errorCode = 'failedToAccess' | 'no data' | 'unknown' | 'unavailable' | 'params';
 
 export enum SecurityLevel {
     L1_Encrypted = 'L1_Encrypted',
