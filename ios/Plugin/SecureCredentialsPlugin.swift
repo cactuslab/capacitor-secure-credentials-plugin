@@ -13,7 +13,7 @@ public class SecureCredentialsPlugin: CAPPlugin {
         guard let service = call.getString(.kService),
               let credential = Credential(jsObject: call.getObject(.kCredential))
         else {
-            call.resolve(SecureCredentialsError.unknown(status: "Missing Credential Parameters").toJS())
+            call.resolve(Failure(error: SecureCredentialsError.unknown(status: "Missing Credential Parameters")).toJS())
             return
         }
         
@@ -34,7 +34,7 @@ public class SecureCredentialsPlugin: CAPPlugin {
                 try addAccount(service: service, username: credential.username)
                 call.resolve(Success(result: true).toJS())
             } catch let error {
-                call.resolve((error as! SecureCredentialsError).toJS())
+                call.resolve(Failure(error: error).toJS())
             }
             // save
             return
@@ -50,12 +50,12 @@ public class SecureCredentialsPlugin: CAPPlugin {
                 try addAccount(service: service, username: credential.username)
                 call.resolve(Success(result: true).toJS())
             } catch let error {
-                call.resolve((error as! SecureCredentialsError).toJS())
+                call.resolve(Failure(error: error).toJS())
             }
             return
         }
         guard status == errSecSuccess else {
-            call.resolve(SecureCredentialsError.unknown(status: "OSStatus: \(status)").toJS())
+            call.resolve(Failure(error: SecureCredentialsError.unknown(status: "OSStatus: \(status)")).toJS())
             return
         }
         
@@ -65,17 +65,17 @@ public class SecureCredentialsPlugin: CAPPlugin {
             call.resolve(Success(result: true).toJS())
             return
         } catch let error {
-            call.resolve((error as! SecureCredentialsError).toJS())
+            call.resolve(Failure(error: error).toJS())
         }
         
-        call.resolve(SecureCredentialsError.noData.toJS())
+        call.resolve(Failure(error: SecureCredentialsError.noData).toJS())
     }
     
     @objc func getCredential(_ call: CAPPluginCall) {
         guard let service = call.getString(.kService),
               let username = call.getString(.kUsername)
         else {
-            call.resolve(SecureCredentialsError.unknown(status: "Missing Identifier Parameters in Call").toJS())
+            call.resolve(Failure(error: SecureCredentialsError.unknown(status: "Missing Identifier Parameters in Call")).toJS())
             return
         }
         
@@ -89,11 +89,11 @@ public class SecureCredentialsPlugin: CAPPlugin {
         var item: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &item)
         guard status != errSecItemNotFound else {
-            call.resolve(SecureCredentialsError.noData.toJS())
+            call.resolve(Failure(error: SecureCredentialsError.noData).toJS())
             return
         }
         guard status == errSecSuccess else {
-            call.resolve(SecureCredentialsError.unknown(status: "OSStatus: \(status)").toJS())
+            call.resolve(Failure(error: SecureCredentialsError.unknown(status: "OSStatus: \(status)")).toJS())
             return
         }
         
@@ -101,7 +101,7 @@ public class SecureCredentialsPlugin: CAPPlugin {
             let passwordData = existingItem[kSecValueData as String] as? Data,
             let password = String(data: passwordData, encoding: String.Encoding.utf8)
         else {
-            call.resolve(SecureCredentialsError.unknown(status: "Unexpected Data in the the keychain result").toJS())
+            call.resolve(Failure(error: SecureCredentialsError.unknown(status: "Unexpected Data in the the keychain result")).toJS())
             return
         }
         
@@ -113,10 +113,9 @@ public class SecureCredentialsPlugin: CAPPlugin {
         
         do {
             let accounts = try getAccounts(service: service)
-            let result = Success(result: accounts)
-            call.resolve(result.toJS())
+            call.resolve(Success(result: accounts).toJS())
         } catch let error {
-            call.resolve((error as! SecureCredentialsError).toJS())
+            call.resolve(Failure(error: error).toJS())
         }
     }
     
@@ -124,7 +123,7 @@ public class SecureCredentialsPlugin: CAPPlugin {
         guard let service = call.getString(.kService),
               let username = call.getString(.kUsername)
         else {
-            call.resolve(SecureCredentialsError.unknown(status: "Missing Identifier Parameters in Call").toJS())
+            call.resolve(Failure(error: SecureCredentialsError.unknown(status: "Missing Identifier Parameters in Call")).toJS())
             return
         }
         
@@ -133,7 +132,7 @@ public class SecureCredentialsPlugin: CAPPlugin {
             try delete(service: service, username: username)
             try removeAccount(service: service, username: username)
         } catch let error {
-            call.resolve((error as! SecureCredentialsError).toJS())
+            call.resolve(Failure(error: error).toJS())
         }
         
         call.resolve(BooleanSuccess.toJS())
@@ -147,7 +146,7 @@ public class SecureCredentialsPlugin: CAPPlugin {
             try delete(service: service)
             try removeAllAccounts(service: service)
         } catch let error {
-            call.resolve((error as! SecureCredentialsError).toJS())
+            call.resolve(Failure(error: error).toJS())
         }
         
         call.resolve(BooleanSuccess.toJS())
@@ -155,7 +154,7 @@ public class SecureCredentialsPlugin: CAPPlugin {
     
     @objc func canUseSecurityLevel(_ call: CAPPluginCall) {
         guard let securityLevel = SecurityLevel(rawValue: call.getString(.kSecurityLevel, "")) else {
-            call.resolve(SecureCredentialsError.unknown(status: "We didn't understand the security level: \(call.getString(.kSecurityLevel, ""))").toJS())
+            call.resolve(Failure(error: SecureCredentialsError.unknown(status: "We didn't understand the security level: \(call.getString(.kSecurityLevel, ""))")).toJS())
             return
         }
         
@@ -170,14 +169,14 @@ public class SecureCredentialsPlugin: CAPPlugin {
             if context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error) {
                 call.resolve(BooleanSuccess.toJS())
             } else {
-                call.resolve(SecureCredentialsError.unavailable(message: "This type is unavailable: \(error?.localizedDescription ?? "no error")").toJS())
+                call.resolve(Failure(error: SecureCredentialsError.unavailable(message: "This type is unavailable: \(error?.localizedDescription ?? "no error")")).toJS())
             }
         case .L3_UserPresence, .L4_Biometrics:
             var error: NSError? = nil
             if context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) {
                 call.resolve(BooleanSuccess.toJS())
             } else {
-                call.resolve(SecureCredentialsError.unavailable(message: "This type is unavailable: \(error?.localizedDescription ?? "no error")").toJS())
+                call.resolve(Failure(error: SecureCredentialsError.unavailable(message: "This type is unavailable: \(error?.localizedDescription ?? "no error")")).toJS())
             }
             call.resolve(BooleanSuccess.toJS())
         }
@@ -339,10 +338,19 @@ private struct Failure<T> : JsAble {
     let error: T
     
     func toJS() -> [String: Any] {
-        return [
-            "success" : false,
-            "error" : error
-        ]
+        var js: [String: Any] = ["success": false]
+        var res: Any?
+        if let error = error as? JsAble {
+            res = error.toJS()
+        } else if let error = error as? [JsAble] {
+            res = error.map({$0.toJS()})
+        } else {
+            res = error
+        }
+        if let res = res {
+            js["error"] = res
+        }
+        return js
     }
 }
 
