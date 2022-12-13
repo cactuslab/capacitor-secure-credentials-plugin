@@ -1,5 +1,11 @@
 # capacitor-secure-credentials-plugin
 
+## 0.2.0
+
+### Minor Changes
+
+- a72f162: Add params error type
+
 ## 0.1.0
 
 ### Minor Changes
