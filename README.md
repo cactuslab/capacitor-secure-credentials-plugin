@@ -21,6 +21,7 @@ npx cap sync
 * [`canUseSecurityLevel(...)`](#canusesecuritylevel)
 * [`maximumAllowedSecurityLevel()`](#maximumallowedsecuritylevel)
 * [Interfaces](#interfaces)
+* [Type Aliases](#type-aliases)
 * [Enums](#enums)
 
 </docgen-index>
@@ -31,7 +32,7 @@ npx cap sync
 ### getCredential(...)
 
 ```typescript
-getCredential(options: { service: string; username: string; }) => any
+getCredential(options: { service: string; username: string; }) => Promise<Success<Credential> | Failure<SecureCredentialsError>>
 ```
 
 Get a credential matching a service and username if one exists.
@@ -40,7 +41,7 @@ Get a credential matching a service and username if one exists.
 | ------------- | --------------------------------------------------- |
 | **`options`** | <code>{ service: string; username: string; }</code> |
 
-**Returns:** <code>any</code>
+**Returns:** <code>Promise&lt;<a href="#success">Success</a>&lt;<a href="#credential">Credential</a>&gt; | <a href="#failure">Failure</a>&lt;<a href="#securecredentialserror">SecureCredentialsError</a>&gt;&gt;</code>
 
 --------------------
 
@@ -48,7 +49,7 @@ Get a credential matching a service and username if one exists.
 ### getUsernames(...)
 
 ```typescript
-getUsernames(options: { service: string; }) => any
+getUsernames(options: { service: string; }) => Promise<Success<string[]> | Failure<SecureCredentialsError>>
 ```
 
 Get all credentials stored in a service. 
@@ -58,7 +59,7 @@ A user may be challenged with an ID check every time this is called.
 | ------------- | --------------------------------- |
 | **`options`** | <code>{ service: string; }</code> |
 
-**Returns:** <code>any</code>
+**Returns:** <code>Promise&lt;<a href="#failure">Failure</a>&lt;<a href="#securecredentialserror">SecureCredentialsError</a>&gt; | <a href="#success">Success</a>&lt;string[]&gt;&gt;</code>
 
 --------------------
 
@@ -66,7 +67,7 @@ A user may be challenged with an ID check every time this is called.
 ### removeCredential(...)
 
 ```typescript
-removeCredential(options: { service: string; username: string; }) => any
+removeCredential(options: { service: string; username: string; }) => Promise<Success<boolean> | Failure<SecureCredentialsError>>
 ```
 
 Remove a specific credential
@@ -75,7 +76,7 @@ Remove a specific credential
 | ------------- | --------------------------------------------------- |
 | **`options`** | <code>{ service: string; username: string; }</code> |
 
-**Returns:** <code>any</code>
+**Returns:** <code>Promise&lt;<a href="#failure">Failure</a>&lt;<a href="#securecredentialserror">SecureCredentialsError</a>&gt; | <a href="#success">Success</a>&lt;boolean&gt;&gt;</code>
 
 --------------------
 
@@ -83,7 +84,7 @@ Remove a specific credential
 ### removeCredentials(...)
 
 ```typescript
-removeCredentials(options: { service: string; }) => any
+removeCredentials(options: { service: string; }) => Promise<Success<boolean> | Failure<SecureCredentialsError>>
 ```
 
 Remove all credentials belonging to a service
@@ -92,7 +93,7 @@ Remove all credentials belonging to a service
 | ------------- | --------------------------------- |
 | **`options`** | <code>{ service: string; }</code> |
 
-**Returns:** <code>any</code>
+**Returns:** <code>Promise&lt;<a href="#failure">Failure</a>&lt;<a href="#securecredentialserror">SecureCredentialsError</a>&gt; | <a href="#success">Success</a>&lt;boolean&gt;&gt;</code>
 
 --------------------
 
@@ -100,7 +101,7 @@ Remove all credentials belonging to a service
 ### setCredential(...)
 
 ```typescript
-setCredential(options: { service: string; credential: Credential; options?: CredentialOptions; }) => any
+setCredential(options: { service: string; credential: Credential; options?: CredentialOptions; }) => Promise<Success<boolean> | Failure<SecureCredentialsError>>
 ```
 
 Set a credential into the secure store. This will overwrite any existing credential of the same service and username.
@@ -109,7 +110,7 @@ Set a credential into the secure store. This will overwrite any existing credent
 | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **`options`** | <code>{ service: string; credential: <a href="#credential">Credential</a>; options?: <a href="#credentialoptions">CredentialOptions</a>; }</code> |
 
-**Returns:** <code>any</code>
+**Returns:** <code>Promise&lt;<a href="#failure">Failure</a>&lt;<a href="#securecredentialserror">SecureCredentialsError</a>&gt; | <a href="#success">Success</a>&lt;boolean&gt;&gt;</code>
 
 --------------------
 
@@ -117,7 +118,7 @@ Set a credential into the secure store. This will overwrite any existing credent
 ### canUseSecurityLevel(...)
 
 ```typescript
-canUseSecurityLevel(options: { securityLevel: SecurityLevel; }) => any
+canUseSecurityLevel(options: { securityLevel: SecurityLevel; }) => Promise<Success<boolean> | Failure<SecureCredentialsError>>
 ```
 
 Verify if the current platform can handle a particular security level.
@@ -126,7 +127,7 @@ Verify if the current platform can handle a particular security level.
 | ------------- | --------------------------------------------------------------------------- |
 | **`options`** | <code>{ securityLevel: <a href="#securitylevel">SecurityLevel</a>; }</code> |
 
-**Returns:** <code>any</code>
+**Returns:** <code>Promise&lt;<a href="#failure">Failure</a>&lt;<a href="#securecredentialserror">SecureCredentialsError</a>&gt; | <a href="#success">Success</a>&lt;boolean&gt;&gt;</code>
 
 --------------------
 
@@ -134,13 +135,13 @@ Verify if the current platform can handle a particular security level.
 ### maximumAllowedSecurityLevel()
 
 ```typescript
-maximumAllowedSecurityLevel() => any
+maximumAllowedSecurityLevel() => Promise<Success<SecurityLevel> | Failure<SecureCredentialsError>>
 ```
 
 Determine the maximum allowed security level on a platform.
 This may change over the course of an application's lifetime as users may add or remove pins or biometric scanning features.
 
-**Returns:** <code>any</code>
+**Returns:** <code>Promise&lt;<a href="#failure">Failure</a>&lt;<a href="#securecredentialserror">SecureCredentialsError</a>&gt; | <a href="#success">Success</a>&lt;<a href="#securitylevel">SecurityLevel</a>&gt;&gt;</code>
 
 --------------------
 
@@ -174,10 +175,10 @@ This may change over the course of an application's lifetime as users may add or
 
 #### SecureCredentialsError
 
-| Prop          | Type                                                    |
-| ------------- | ------------------------------------------------------- |
-| **`code`**    | <code>"failedToAccess" \| "no data" \| "unknown"</code> |
-| **`message`** | <code>string</code>                                     |
+| Prop          | Type                                            |
+| ------------- | ----------------------------------------------- |
+| **`code`**    | <code><a href="#errorcode">errorCode</a></code> |
+| **`message`** | <code>string</code>                             |
 
 
 #### CredentialOptions
@@ -185,6 +186,14 @@ This may change over the course of an application's lifetime as users may add or
 | Prop                | Type                                                    |
 | ------------------- | ------------------------------------------------------- |
 | **`securityLevel`** | <code><a href="#securitylevel">SecurityLevel</a></code> |
+
+
+### Type Aliases
+
+
+#### errorCode
+
+<code>'failedToAccess' | 'no data' | 'unknown'</code>
 
 
 ### Enums
