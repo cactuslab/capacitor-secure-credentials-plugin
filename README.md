@@ -36,6 +36,7 @@ getCredential(options: { service: string; username: string; }) => Promise<Succes
 ```
 
 Get a credential matching a service and username if one exists.
+The user may be challenged to authenticate this request every time it is called.
 
 | Param         | Type                                                |
 | ------------- | --------------------------------------------------- |
@@ -52,8 +53,7 @@ Get a credential matching a service and username if one exists.
 getUsernames(options: { service: string; }) => Promise<Success<string[]> | Failure<SecureCredentialsError>>
 ```
 
-Get all credentials stored in a service. 
-A user may be challenged with an ID check every time this is called.
+Get all usernames that have credentials stored for a service.
 
 | Param         | Type                              |
 | ------------- | --------------------------------- |
