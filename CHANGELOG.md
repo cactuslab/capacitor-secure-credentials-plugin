@@ -1,5 +1,11 @@
 # capacitor-secure-credentials-plugin
 
+## 0.2.1
+
+### Patch Changes
+
+- 3a70bbf: Android: Updated dependencies to remove jcenter reference
+
 ## 0.2.0
 
 ### Minor Changes
