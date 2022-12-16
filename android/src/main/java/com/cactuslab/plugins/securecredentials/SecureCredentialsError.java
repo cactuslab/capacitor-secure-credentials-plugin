@@ -22,7 +22,7 @@ public class SecureCredentialsError implements JsAble {
         return result;
     }
 
-    static final SecureCredentialsError failedToAccess = new SecureCredentialsError("We failed to access the keystore", "failedToAccess");
+    static final SecureCredentialsError failedToAccess = new SecureCredentialsError("We failed to access the keystore", "failed to access");
     static final SecureCredentialsError noData = new SecureCredentialsError("The credentials don't yet exist", "no data");
     static SecureCredentialsError unavailable(String message) {
         return new SecureCredentialsError(message, "unavailable");
@@ -30,5 +30,5 @@ public class SecureCredentialsError implements JsAble {
     static SecureCredentialsError unknown(String message) {
         return new SecureCredentialsError("Something went wrong \uD83D\uDE31: " + message, "unknown");
     }
-    static SecureCredentialsError missingParameters = new SecureCredentialsError("Some parameters were missing", "missingParameters");
+    static SecureCredentialsError missingParameters = new SecureCredentialsError("Some parameters were missing", "params");
 }

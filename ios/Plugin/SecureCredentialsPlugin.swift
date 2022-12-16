@@ -390,11 +390,11 @@ private enum SecureCredentialsError: Error, JsAble {
     
     private var jsCode: String {
         switch self {
-        case .failedToAccess: return "failedToAccess"
+        case .failedToAccess: return "failed to access"
         case .noData: return "no data"
-        case .unknown: return "unknown"
         case .unavailable: return "unavailable"
         case .params: return "params"
+        case .unknown: return "unknown"
         }
     }
     
@@ -403,8 +403,8 @@ private enum SecureCredentialsError: Error, JsAble {
         case .failedToAccess: return "We failed to access the keychain"
         case .noData: return "The credentials don't yet exist"
         case .unavailable(let message): return message
-        case .unknown(let status): return "Something went wrong 😱: \(status)"
         case .params(let message): return "Invalid parameters: \(message)"
+        case .unknown(let status): return "Something went wrong 😱: \(status)"
         }
     }
     

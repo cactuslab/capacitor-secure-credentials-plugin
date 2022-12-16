@@ -1,4 +1,10 @@
-type errorCode = 'failedToAccess' | 'no data' | 'unknown' | 'unavailable' | 'params';
+export enum SecurityErrorCode {
+    FailedToAccess = 'failed to access',
+    NoData = 'no data',
+    Unknown = 'unknown',
+    Unavailable = 'unavailable',
+    Params = 'params',
+}
 
 export enum SecurityLevel {
     L1_Encrypted = 'L1_Encrypted',
@@ -25,7 +31,7 @@ export interface CredentialOptions {
     securityLevel?: SecurityLevel
 }
 export interface SecureCredentialsError {
-    code: errorCode;
+    code: SecurityErrorCode;
     message: string;
 }
 
