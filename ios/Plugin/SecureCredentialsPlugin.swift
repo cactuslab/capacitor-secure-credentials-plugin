@@ -152,7 +152,7 @@ public class SecureCredentialsPlugin: CAPPlugin {
         call.resolve(BooleanSuccess.toJS())
     }
     
-    @objc func maximumAllowedSecurityLevel(_ call: CAPPluginCall) {
+    @objc func maximumSecurityLevel(_ call: CAPPluginCall) {
         call.resolve(Success(result: maximumSupportedSecurityLevel().rawValue).toJS())
     }
     

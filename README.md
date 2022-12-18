@@ -18,7 +18,7 @@ npx cap sync
 * [`removeCredential(...)`](#removecredential)
 * [`removeCredentials(...)`](#removecredentials)
 * [`setCredential(...)`](#setcredential)
-* [`maximumAllowedSecurityLevel()`](#maximumallowedsecuritylevel)
+* [`maximumSecurityLevel()`](#maximumsecuritylevel)
 * [Interfaces](#interfaces)
 * [Enums](#enums)
 
@@ -113,13 +113,13 @@ Set a credential into the secure store. This will overwrite any existing credent
 --------------------
 
 
-### maximumAllowedSecurityLevel()
+### maximumSecurityLevel()
 
 ```typescript
-maximumAllowedSecurityLevel() => Promise<Success<SecurityLevel> | Failure<SecureCredentialsError>>
+maximumSecurityLevel() => Promise<Success<SecurityLevel> | Failure<SecureCredentialsError>>
 ```
 
-Determine the maximum allowed security level on a platform.
+Determine the maximum security level supported on the platform.
 This may change over the course of an application's lifetime as users may add or remove pins or biometric scanning features.
 
 **Returns:** <code>Promise&lt;<a href="#failure">Failure</a>&lt;<a href="#securecredentialserror">SecureCredentialsError</a>&gt; | <a href="#success">Success</a>&lt;<a href="#securitylevel">SecurityLevel</a>&gt;&gt;</code>

@@ -116,7 +116,7 @@ public class SecureCredentialsPlugin extends Plugin {
     }
 
     @PluginMethod
-    public void maximumAllowedSecurityLevel(PluginCall call) {
+    public void maximumSecurityLevel(PluginCall call) {
         SecurityLevel max = helper.maximumSupportedLevel(getContext());
         call.resolve((new SecureCredentialsResult<>(true, max.value)).toJS());
     }
