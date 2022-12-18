@@ -52,8 +52,7 @@ public class SecureCredentialsPlugin extends Plugin {
         JSObject options = call.getObject(OPTIONS_KEY, new JSObject());
         assert options != null;
 
-        SecurityLevel securityLevel = SecurityLevel.get(options.getString(SECURITY_LEVEL_KEY, helper.maximumSupportedLevel(getContext()).level));
-
+        SecurityLevel securityLevel = SecurityLevel.get(options.getInteger(SECURITY_LEVEL_KEY, helper.maximumSupportedLevel(getContext()).value));
         call.resolve(setCredential(service, username, password, securityLevel).toJS());
     }
 
@@ -141,7 +140,7 @@ public class SecureCredentialsPlugin extends Plugin {
     @PluginMethod
     public void maximumAllowedSecurityLevel(PluginCall call) {
         SecurityLevel max = helper.maximumSupportedLevel(getContext());
-        call.resolve((new SecureCredentialsResult<>(true, max.level)).toJS());
+        call.resolve((new SecureCredentialsResult<>(true, max.value)).toJS());
     }
 
     private void startBiometric(final PluginCall call, String service, String username) {

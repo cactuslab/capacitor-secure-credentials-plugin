@@ -7,11 +7,12 @@ export enum SecurityErrorCode {
 }
 
 export enum SecurityLevel {
-    L1_Encrypted = 'L1_Encrypted',
-    L2_DeviceUnlocked = 'L2_DeviceUnlocked',
-    L3_UserPresence = 'L3_UserPresence',
-    L4_Biometrics = 'L4_Biometrics'
+    L1_Encrypted = 1,
+    L2_DeviceUnlocked = 2,
+    L3_UserPresence = 3,
+    L4_Biometrics = 4,
 }
+
 export interface Credential {
     username: string;
     password: string;

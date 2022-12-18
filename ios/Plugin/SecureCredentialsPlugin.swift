@@ -153,7 +153,7 @@ public class SecureCredentialsPlugin: CAPPlugin {
     }
     
     @objc func canUseSecurityLevel(_ call: CAPPluginCall) {
-        guard let securityLevel = SecurityLevel(rawValue: call.getString(.kSecurityLevel, "")) else {
+        guard let securityLevelValue = call.getInt(.kSecurityLevel), let securityLevel = SecurityLevel(rawValue: securityLevelValue) else {
             call.resolve(Failure(error: SecureCredentialsError.params(message: "Invalid security level: \(call.getString(.kSecurityLevel, ""))")).toJS())
             return
         }
@@ -417,11 +417,15 @@ private enum SecureCredentialsError: Error, JsAble {
 }
 
 
-private enum SecurityLevel: String {
-    case L1_Encrypted = "L1_Encrypted"
-    case L2_DeviceUnlocked = "L2_DeviceUnlocked"
-    case L3_UserPresence = "L3_UserPresence"
-    case L4_Biometrics = "L4_Biometrics"
+private enum SecurityLevel: Int, Comparable {
+    static func < (lhs: SecurityLevel, rhs: SecurityLevel) -> Bool {
+        return lhs.rawValue < rhs.rawValue
+    }
+    
+    case L1_Encrypted = 1
+    case L2_DeviceUnlocked = 2
+    case L3_UserPresence = 3
+    case L4_Biometrics = 4
     
     var secAccessControlFlags: SecAccessControlCreateFlags {
         switch self {
@@ -441,7 +445,7 @@ private struct Options {
     let securityLevel : SecurityLevel
     
     init(jsObject: JSObject?) {
-        if let securityLevelString = jsObject?[.kSecurityLevel] as? String, let level = SecurityLevel(rawValue: securityLevelString) {
+        if let securityLevelValue = jsObject?[.kSecurityLevel] as? Int, let level = SecurityLevel(rawValue: securityLevelValue) {
             securityLevel = level
         } else {
             securityLevel = .L4_Biometrics

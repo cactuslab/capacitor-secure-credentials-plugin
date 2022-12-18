@@ -14,12 +14,12 @@ public class MetaData {
     }
 
     MetaData(JSONObject jsonObject) throws JSONException {
-        this.securityLevel = SecurityLevel.get(jsonObject.getString(SECURITY_LEVEL_KEY));
+        this.securityLevel = SecurityLevel.get(jsonObject.getInt(SECURITY_LEVEL_KEY));
     }
 
     JSONObject asJson() throws JSONException {
         JSONObject object = new JSONObject();
-        object.put(SECURITY_LEVEL_KEY, securityLevel.level);
+        object.put(SECURITY_LEVEL_KEY, securityLevel.value);
         return object;
     }
 }

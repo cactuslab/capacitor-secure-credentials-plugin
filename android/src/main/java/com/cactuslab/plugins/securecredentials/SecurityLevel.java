@@ -6,32 +6,24 @@ import java.util.HashMap;
 import java.util.Map;
 
 public enum SecurityLevel {
-    L1_ENCRYPTED ("L1_Encrypted", 1),
-    L2_DEVICE_UNLOCKED ("L2_DeviceUnlocked", 2),
-    L3_USER_PRESENCE ("L3_UserPresence", 3),
-    L4_BIOMETRICS ("L4_Biometrics", 4);
+    L1_ENCRYPTED (1),
+    L2_DEVICE_UNLOCKED (2),
+    L3_USER_PRESENCE (3),
+    L4_BIOMETRICS (4);
 
-    final String level;
-    final int comparisonValue;
+    final int value;
 
-    SecurityLevel(String level, int comparisonValue) {
-        this.level = level;
-        this.comparisonValue = comparisonValue;
-    }
-
-    private static final Map<String, SecurityLevel> lookup = new HashMap<>();
-
-    static {
-        for (SecurityLevel level : SecurityLevel.values()) {
-            lookup.put(level.level, level);
-        }
+    SecurityLevel(int value) {
+        this.value = value;
     }
 
     @Nullable
-    public static SecurityLevel get(@Nullable String level) {
-        if (level == null) {
-            return null;
+    public static SecurityLevel get(int level) {
+        for (SecurityLevel aLevel : values()) {
+            if (aLevel.value == level) {
+                return aLevel;
+            }
         }
-        return lookup.get(level);
+        throw new IllegalArgumentException("Invalid security level: " + level);
     }
 }
