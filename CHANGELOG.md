@@ -1,5 +1,18 @@
 # capacitor-secure-credentials-plugin
 
+## 1.0.0
+
+### Major Changes
+
+- 76de6b1: Remove defunct canUseSecurityLevel API
+- d83f1ca: Rename maximumAllowedSecurityLevel to maximumSecurityLevel
+
+### Minor Changes
+
+- f0032a8: Tidy error codes
+- ec48503: Change security levels to an int-backed enum so you can compare levels easily
+- 67629fc: Fix misreporting of maximum security level as L2 when it should be L3
+
 ## 0.2.1
 
 ### Patch Changes
