@@ -18,10 +18,8 @@ npx cap sync
 * [`removeCredential(...)`](#removecredential)
 * [`removeCredentials(...)`](#removecredentials)
 * [`setCredential(...)`](#setcredential)
-* [`canUseSecurityLevel(...)`](#canusesecuritylevel)
 * [`maximumAllowedSecurityLevel()`](#maximumallowedsecuritylevel)
 * [Interfaces](#interfaces)
-* [Type Aliases](#type-aliases)
 * [Enums](#enums)
 
 </docgen-index>
@@ -115,23 +113,6 @@ Set a credential into the secure store. This will overwrite any existing credent
 --------------------
 
 
-### canUseSecurityLevel(...)
-
-```typescript
-canUseSecurityLevel(options: { securityLevel: SecurityLevel; }) => Promise<Success<boolean> | Failure<SecureCredentialsError>>
-```
-
-Verify if the current platform can handle a particular security level.
-
-| Param         | Type                                                                        |
-| ------------- | --------------------------------------------------------------------------- |
-| **`options`** | <code>{ securityLevel: <a href="#securitylevel">SecurityLevel</a>; }</code> |
-
-**Returns:** <code>Promise&lt;<a href="#failure">Failure</a>&lt;<a href="#securecredentialserror">SecureCredentialsError</a>&gt; | <a href="#success">Success</a>&lt;boolean&gt;&gt;</code>
-
---------------------
-
-
 ### maximumAllowedSecurityLevel()
 
 ```typescript
@@ -175,10 +156,10 @@ This may change over the course of an application's lifetime as users may add or
 
 #### SecureCredentialsError
 
-| Prop          | Type                                            |
-| ------------- | ----------------------------------------------- |
-| **`code`**    | <code><a href="#errorcode">errorCode</a></code> |
-| **`message`** | <code>string</code>                             |
+| Prop          | Type                                                            |
+| ------------- | --------------------------------------------------------------- |
+| **`code`**    | <code><a href="#securityerrorcode">SecurityErrorCode</a></code> |
+| **`message`** | <code>string</code>                                             |
 
 
 #### CredentialOptions
@@ -188,24 +169,27 @@ This may change over the course of an application's lifetime as users may add or
 | **`securityLevel`** | <code><a href="#securitylevel">SecurityLevel</a></code> |
 
 
-### Type Aliases
-
-
-#### errorCode
-
-<code>'failedToAccess' | 'no data' | 'unknown' | 'unavailable' | 'params'</code>
-
-
 ### Enums
+
+
+#### SecurityErrorCode
+
+| Members              | Value                           |
+| -------------------- | ------------------------------- |
+| **`FailedToAccess`** | <code>'failed to access'</code> |
+| **`NoData`**         | <code>'no data'</code>          |
+| **`Unknown`**        | <code>'unknown'</code>          |
+| **`Unavailable`**    | <code>'unavailable'</code>      |
+| **`Params`**         | <code>'params'</code>           |
 
 
 #### SecurityLevel
 
-| Members                 | Value                            |
-| ----------------------- | -------------------------------- |
-| **`L1_Encrypted`**      | <code>'L1_Encrypted'</code>      |
-| **`L2_DeviceUnlocked`** | <code>'L2_DeviceUnlocked'</code> |
-| **`L3_UserPresence`**   | <code>'L3_UserPresence'</code>   |
-| **`L4_Biometrics`**     | <code>'L4_Biometrics'</code>     |
+| Members                 | Value          |
+| ----------------------- | -------------- |
+| **`L1_Encrypted`**      | <code>1</code> |
+| **`L2_DeviceUnlocked`** | <code>2</code> |
+| **`L3_UserPresence`**   | <code>3</code> |
+| **`L4_Biometrics`**     | <code>4</code> |
 
 </docgen-api>

@@ -32,10 +32,6 @@ export class SecureCredentialsWeb extends WebPlugin implements SecureCredentials
     return setTimeout(() => console.log('WEB -> setCredential', options) , 1000) as unknown as Success<boolean> | Failure<SecureCredentialsError>;
   }
 
-  async canUseSecurityLevel(options: {securityLevel: SecurityLevel}): Promise<Success<boolean> | Failure<SecureCredentialsError>> {
-    return setTimeout(() => console.log('WEB -> canUseProtection', options) , 1000) as unknown as Success<boolean> | Failure<SecureCredentialsError>;
-  }
-
   async maximumAllowedSecurityLevel(): Promise<Success<SecurityLevel> | Failure<SecureCredentialsError>> {
     return setTimeout(() => console.log('WEB -> maximumAllowedSecurityLevel?') , 1000) as unknown as Success<SecurityLevel> | Failure<SecureCredentialsError>;
   }

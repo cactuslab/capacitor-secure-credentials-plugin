@@ -59,10 +59,6 @@ export interface SecureCredentialsPlugin {
      */
     setCredential(options: {service: string, credential: Credential, options?: CredentialOptions}): Promise<Success<boolean> | Failure<SecureCredentialsError>>;
     /**
-     * Verify if the current platform can handle a particular security level.
-     */
-    canUseSecurityLevel(options: {securityLevel: SecurityLevel}): Promise<Success<boolean> | Failure<SecureCredentialsError>>;
-    /**
      * Determine the maximum allowed security level on a platform.
      * This may change over the course of an application's lifetime as users may add or remove pins or biometric scanning features.
      */

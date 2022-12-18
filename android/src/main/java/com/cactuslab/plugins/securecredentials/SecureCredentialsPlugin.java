@@ -116,28 +116,6 @@ public class SecureCredentialsPlugin extends Plugin {
     }
 
     @PluginMethod
-    public void canUseSecurityLevel(PluginCall call) {
-        String levelString = call.getString(SECURITY_LEVEL_KEY);
-        if (levelString == null) {
-            call.resolve(SecureCredentialsResult.errorResult(SecureCredentialsError.unknown("Missing parameters")).toJS());
-            return;
-        }
-
-        SecurityLevel queryLevel = SecurityLevel.get(levelString);
-        if (queryLevel == null) {
-            call.resolve(SecureCredentialsResult.errorResult(SecureCredentialsError.unknown("Unknown Security level")).toJS());
-            return;
-        }
-
-        SecurityLevel max = helper.maximumSupportedLevel(getContext());
-        if (max.comparisonValue >= queryLevel.comparisonValue) {
-            call.resolve(SecureCredentialsResult.successResult.toJS());
-        } else {
-            call.resolve(SecureCredentialsResult.errorResult(SecureCredentialsError.unavailable("This type is unavailable")).toJS());
-        }
-    }
-
-    @PluginMethod
     public void maximumAllowedSecurityLevel(PluginCall call) {
         SecurityLevel max = helper.maximumSupportedLevel(getContext());
         call.resolve((new SecureCredentialsResult<>(true, max.value)).toJS());

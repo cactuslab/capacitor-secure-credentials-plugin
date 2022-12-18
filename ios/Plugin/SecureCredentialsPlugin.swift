@@ -152,36 +152,6 @@ public class SecureCredentialsPlugin: CAPPlugin {
         call.resolve(BooleanSuccess.toJS())
     }
     
-    @objc func canUseSecurityLevel(_ call: CAPPluginCall) {
-        guard let securityLevelValue = call.getInt(.kSecurityLevel), let securityLevel = SecurityLevel(rawValue: securityLevelValue) else {
-            call.resolve(Failure(error: SecureCredentialsError.params(message: "Invalid security level: \(call.getString(.kSecurityLevel, ""))")).toJS())
-            return
-        }
-        
-        let context = LAContext()
-        
-        switch securityLevel {
-        
-        case .L1_Encrypted:
-            call.resolve(BooleanSuccess.toJS())
-        case .L2_DeviceUnlocked:
-            var error: NSError? = nil
-            if context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error) {
-                call.resolve(BooleanSuccess.toJS())
-            } else {
-                call.resolve(Failure(error: SecureCredentialsError.unavailable(message: "This type is unavailable: \(error?.localizedDescription ?? "no error")")).toJS())
-            }
-        case .L3_UserPresence, .L4_Biometrics:
-            var error: NSError? = nil
-            if context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) {
-                call.resolve(BooleanSuccess.toJS())
-            } else {
-                call.resolve(Failure(error: SecureCredentialsError.unavailable(message: "This type is unavailable: \(error?.localizedDescription ?? "no error")")).toJS())
-            }
-            call.resolve(BooleanSuccess.toJS())
-        }
-    }
-    
     @objc func maximumAllowedSecurityLevel(_ call: CAPPluginCall) {
         call.resolve(Success(result: maximumSupportedSecurityLevel().rawValue).toJS())
     }
