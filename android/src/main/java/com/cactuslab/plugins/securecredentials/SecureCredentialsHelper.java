@@ -200,7 +200,7 @@ public class SecureCredentialsHelper {
                 break;
         }
         if (biometricManager.canAuthenticate(DEVICE_CREDENTIAL) == BiometricManager.BIOMETRIC_SUCCESS) {
-            return SecurityLevel.L2_DEVICE_UNLOCKED;
+            return SecurityLevel.L3_USER_PRESENCE;
         }
         return SecurityLevel.L1_ENCRYPTED;
     }

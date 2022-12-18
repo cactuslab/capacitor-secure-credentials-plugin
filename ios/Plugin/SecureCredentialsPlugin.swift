@@ -164,8 +164,11 @@ public class SecureCredentialsPlugin: CAPPlugin {
         }
         error = nil
         if context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error) {
-            return .L2_DeviceUnlocked
+            /* We can perform L2 and L3 if we can authenticate the device owner */
+            return .L3_UserPresence
         }
+        
+        /* The keychain is always available */
         return .L1_Encrypted
     }
     
@@ -175,12 +178,24 @@ public class SecureCredentialsPlugin: CAPPlugin {
         switch options.securityLevel {
         case .L1_Encrypted:
             break
-        default:
-            let access = SecAccessControlCreateWithFlags(nil, // Use the default allocator.
-                                                         kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly,
-                                                         options.securityLevel.secAccessControlFlags,
-                                                         nil) // Ignore any error.
-            query[kSecAttrAccessControl as String] = access as Any
+        case .L2_DeviceUnlocked:
+            query[kSecAttrAccessControl as String] = SecAccessControlCreateWithFlags(nil, // Use the default allocator.
+                                                                                     kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly,
+                                                                                     [],
+                                                                                     nil) // Ignore any error.
+            break
+        case .L3_UserPresence:
+            query[kSecAttrAccessControl as String] = SecAccessControlCreateWithFlags(nil, // Use the default allocator.
+                                                                                     kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly,
+                                                                                     .userPresence,
+                                                                                     nil) // Ignore any error.
+            break
+        case .L4_Biometrics:
+            query[kSecAttrAccessControl as String] = SecAccessControlCreateWithFlags(nil, // Use the default allocator.
+                                                                                     kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly,
+                                                                                     .biometryCurrentSet,
+                                                                                     nil) // Ignore any error.
+            break
         }
         
         return query
@@ -396,19 +411,6 @@ private enum SecurityLevel: Int, Comparable {
     case L2_DeviceUnlocked = 2
     case L3_UserPresence = 3
     case L4_Biometrics = 4
-    
-    var secAccessControlFlags: SecAccessControlCreateFlags {
-        switch self {
-        case .L1_Encrypted:
-            return []
-        case .L2_DeviceUnlocked:
-            return []
-        case .L3_UserPresence:
-            return .userPresence
-        case .L4_Biometrics:
-            return .biometryCurrentSet
-        }
-    }
 }
 
 private struct Options {
