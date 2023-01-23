@@ -1,5 +1,12 @@
 # capacitor-secure-credentials-plugin
 
+## 1.0.1
+
+### Patch Changes
+
+- 6312ea1: Android: Added logging on plugin interface to make it easier to debug
+- b977444: Android: Fixed credential return result to match Credential type
+
 ## 1.0.0
 
 ### Major Changes
