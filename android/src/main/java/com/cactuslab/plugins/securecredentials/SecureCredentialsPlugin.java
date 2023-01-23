@@ -175,7 +175,10 @@ public class SecureCredentialsPlugin extends Plugin {
         try {
             String result = helper.decryptString(cipher, encryptedData);
             if (result != null) {
-                return (new SecureCredentialsResult<>(true,result));
+                JSObject credential = new JSObject();
+                credential.put(USERNAME_KEY, username);
+                credential.put(PASSWORD_KEY, result);
+                return (new SecureCredentialsResult<>(true,credential));
             } else {
                 return SecureCredentialsResult.errorResult(SecureCredentialsError.noData);
             }
