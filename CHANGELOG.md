@@ -1,5 +1,11 @@
 # capacitor-secure-credentials-plugin
 
+## 1.1.0
+
+### Minor Changes
+
+- d0deca6: Added supportedBiometricSensors function to help determine what kind of biometric sensor a device might have
+
 ## 1.0.1
 
 ### Patch Changes
