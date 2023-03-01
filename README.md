@@ -19,6 +19,7 @@ npx cap sync
 * [`removeCredentials(...)`](#removecredentials)
 * [`setCredential(...)`](#setcredential)
 * [`maximumSecurityLevel()`](#maximumsecuritylevel)
+* [`supportedBiometricSensors()`](#supportedbiometricsensors)
 * [Interfaces](#interfaces)
 * [Enums](#enums)
 
@@ -127,6 +128,21 @@ This may change over the course of an application's lifetime as users may add or
 --------------------
 
 
+### supportedBiometricSensors()
+
+```typescript
+supportedBiometricSensors() => Promise<Success<BiometricSensors>>
+```
+
+Determine the device capabilities for biometric scanning features. A device may have any combination of sensors and the sensors
+available may change depending on whether a user has granted permission to inspect the device sensors or whether they are enrolled
+with those sensors. Not all devices advertise what sensors they have. The information gathered is not guaranteed to be 100% accurate.
+
+**Returns:** <code>Promise&lt;<a href="#success">Success</a>&lt;<a href="#biometricsensors">BiometricSensors</a>&gt;&gt;</code>
+
+--------------------
+
+
 ### Interfaces
 
 
@@ -167,6 +183,15 @@ This may change over the course of an application's lifetime as users may add or
 | Prop                | Type                                                    |
 | ------------------- | ------------------------------------------------------- |
 | **`securityLevel`** | <code><a href="#securitylevel">SecurityLevel</a></code> |
+
+
+#### BiometricSensors
+
+| Prop              | Type                 |
+| ----------------- | -------------------- |
+| **`face`**        | <code>boolean</code> |
+| **`fingerprint`** | <code>boolean</code> |
+| **`iris`**        | <code>boolean</code> |
 
 
 ### Enums
