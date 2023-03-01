@@ -36,6 +36,12 @@ export interface SecureCredentialsError {
     message: string;
 }
 
+export interface BiometricSensors {
+    face: boolean;
+    fingerprint: boolean;
+    iris: boolean;
+}
+
 export interface SecureCredentialsPlugin {
     /**
      * Get a credential matching a service and username if one exists.
@@ -63,4 +69,10 @@ export interface SecureCredentialsPlugin {
      * This may change over the course of an application's lifetime as users may add or remove pins or biometric scanning features.
      */
     maximumSecurityLevel(): Promise<Success<SecurityLevel> | Failure<SecureCredentialsError>>
+    /**
+     * Determine the device capabilities for biometric scanning features. A device may have any combination of sensors and the sensors
+     * available may change depending on whether a user has granted permission to inspect the device sensors or whether they are enrolled
+     * with those sensors. Not all devices advertise what sensors they have. The information gathered is not guaranteed to be 100% accurate. 
+     */
+    supportedBiometricSensors(): Promise<Success<BiometricSensors>>
 }

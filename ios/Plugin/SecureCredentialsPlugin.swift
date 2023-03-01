@@ -156,6 +156,24 @@ public class SecureCredentialsPlugin: CAPPlugin {
         call.resolve(Success(result: maximumSupportedSecurityLevel().rawValue).toJS())
     }
     
+    @objc func supportedBiometricSensors(_ call: CAPPluginCall) {
+        let context = LAContext()
+        /** biometryType is populated with a useful value after we run `canEvaluatePolicy` even if the evaluation fails */
+        context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: nil)
+        let biometry = context.biometryType
+        
+        switch (biometry) {
+        case .none:
+            call.resolve(Success(result: BiometricSensors()).toJS())
+        case .touchID:
+            call.resolve(Success(result: BiometricSensors(fingerprint: true)).toJS())
+        case .faceID:
+            call.resolve(Success(result: BiometricSensors(face: true)).toJS())
+        @unknown default:
+            call.resolve(Success(result: BiometricSensors()).toJS())
+        }
+    }
+    
     private func maximumSupportedSecurityLevel() -> SecurityLevel {
         let context = LAContext()
         var error: NSError? = nil
@@ -363,6 +381,26 @@ private struct Credential : JsAble {
     
     var passwordData: Data {
         return password.data(using: String.Encoding.utf8)!
+    }
+}
+
+private struct BiometricSensors : JsAble {
+    let face: Bool
+    let fingerprint: Bool
+    let iris: Bool
+    
+    func toJS() -> [String : Any] {
+        return [
+            "face": face,
+            "fingerprint": fingerprint,
+            "iris": iris
+        ]
+    }
+    
+    init(face: Bool = false, fingerprint: Bool = false, iris: Bool = false) {
+        self.face = face
+        self.fingerprint = fingerprint
+        self.iris = iris
     }
 }
 
