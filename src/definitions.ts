@@ -74,5 +74,5 @@ export interface SecureCredentialsPlugin {
      * available may change depending on whether a user has granted permission to inspect the device sensors or whether they are enrolled
      * with those sensors. Not all devices advertise what sensors they have. The information gathered is not guaranteed to be 100% accurate. 
      */
-    supportedBiometricSensors(): Promise<Success<BiometricSensors> | Failure<SecureCredentialsError>>
+    supportedBiometricSensors(): Promise<Success<BiometricSensors>>
 }

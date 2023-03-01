@@ -37,7 +37,7 @@ export class SecureCredentialsWeb extends WebPlugin implements SecureCredentials
     return setTimeout(() => console.log('WEB -> maximumAllowedSecurityLevel?') , 1000) as unknown as Success<SecurityLevel> | Failure<SecureCredentialsError>;
   }
 
-  async supportedBiometricSensors(): Promise<Success<BiometricSensors> | Failure<SecureCredentialsError>> {
-      return setTimeout(() => console.log('WEB -> supportedBiometricSensors?') , 1000) as unknown as Success<BiometricSensors> | Failure<SecureCredentialsError>;
+  async supportedBiometricSensors(): Promise<Success<BiometricSensors>> {
+      return setTimeout(() => console.log('WEB -> supportedBiometricSensors?') , 1000) as unknown as Success<BiometricSensors>;
   }
 }
