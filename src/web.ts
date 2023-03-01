@@ -7,7 +7,8 @@ import {
   SecureCredentialsPlugin,
   SecurityLevel,
   Success,
-  CredentialOptions
+  CredentialOptions,
+  BiometricSensors
 } from './definitions';
 
 export class SecureCredentialsWeb extends WebPlugin implements SecureCredentialsPlugin {
@@ -34,5 +35,9 @@ export class SecureCredentialsWeb extends WebPlugin implements SecureCredentials
 
   async maximumSecurityLevel(): Promise<Success<SecurityLevel> | Failure<SecureCredentialsError>> {
     return setTimeout(() => console.log('WEB -> maximumAllowedSecurityLevel?') , 1000) as unknown as Success<SecurityLevel> | Failure<SecureCredentialsError>;
+  }
+
+  async supportedBiometricSensors(): Promise<Success<BiometricSensors> | Failure<SecureCredentialsError>> {
+      return setTimeout(() => console.log('WEB -> supportedBiometricSensors?') , 1000) as unknown as Success<BiometricSensors> | Failure<SecureCredentialsError>;
   }
 }

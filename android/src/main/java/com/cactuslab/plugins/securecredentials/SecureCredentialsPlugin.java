@@ -1,9 +1,12 @@
 package com.cactuslab.plugins.securecredentials;
 
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.util.Log;
 
 import androidx.activity.result.ActivityResult;
+import androidx.biometric.BiometricManager;
 
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -43,6 +46,9 @@ public class SecureCredentialsPlugin extends Plugin {
     private static final String OPTIONS_KEY = "options";
     private static final String CREDENTIAL_KEY = "credential";
     private static final String SECURITY_LEVEL_KEY = "securityLevel";
+    private static final String BIO_FACE_KEY = "face";
+    private static final String BIO_IRIS_KEY = "iris";
+    private static final String BIO_FINGER_KEY = "fingerprint";
 
     private final SecureCredentialsHelper helper = new SecureCredentialsHelper();
 
@@ -139,6 +145,25 @@ public class SecureCredentialsPlugin extends Plugin {
         SecurityLevel max = helper.maximumSupportedLevel(getContext());
         Log.d(TAG, "maximumSecurityLevel " + max.value);
         call.resolve((new SecureCredentialsResult<>(true, max.value)).toJS());
+    }
+
+    @PluginMethod
+    public void supportedBiometricSensors(PluginCall call) {
+        Log.d(TAG, "supportedBiometricSensors");
+
+        JSObject result = new JSObject();
+        PackageManager pm = getContext().getPackageManager();
+        result.put(BIO_FINGER_KEY, pm.hasSystemFeature(PackageManager.FEATURE_FINGERPRINT));
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            result.put(BIO_FACE_KEY, pm.hasSystemFeature(PackageManager.FEATURE_FACE));
+            result.put(BIO_IRIS_KEY, pm.hasSystemFeature(PackageManager.FEATURE_IRIS));
+        } else {
+            result.put(BIO_FACE_KEY, false);
+            result.put(BIO_IRIS_KEY, false);
+        }
+
+        Log.d(TAG, "supportedBiometricSensors " + result.toString());
+        call.resolve((new SecureCredentialsResult<>(true, result)).toJS());
     }
 
     private void startBiometric(final PluginCall call, String service, String username) {
