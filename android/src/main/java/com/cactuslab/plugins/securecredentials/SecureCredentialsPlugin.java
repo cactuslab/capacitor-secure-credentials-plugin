@@ -1,12 +1,17 @@
 package com.cactuslab.plugins.securecredentials;
 
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.util.Log;
 
 import androidx.activity.result.ActivityResult;
+import androidx.annotation.MainThread;
+import androidx.annotation.NonNull;
 import androidx.biometric.BiometricManager;
+import androidx.biometric.BiometricPrompt;
+import androidx.core.content.ContextCompat;
 
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -26,6 +31,7 @@ import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
+import java.util.concurrent.Executor;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -93,7 +99,7 @@ public class SecureCredentialsPlugin extends Plugin {
             case L3_USER_PRESENCE:
             case L4_BIOMETRICS:
                 Log.d(TAG, "getCredential L3, L4");
-                startBiometric(call, service, username);
+                getActivity().runOnUiThread(() -> startBiometricLight(call, service, username));
                 break;
             default:
                 Log.d(TAG, "getCredential Fallthrough. Unexpected security level [" + metaData.securityLevel.value + "]");
@@ -193,6 +199,70 @@ public class SecureCredentialsPlugin extends Plugin {
         }
 
         startActivityForResult(call, intent, "biometricResult");
+    }
+
+    @MainThread
+    private void startBiometricLight(final PluginCall call, String service, String username) {
+        SecureCredentialsHelper helper = new SecureCredentialsHelper();
+        Context context = getContext();
+        String title = call.getString(AuthActivity.TITLE_KEY);
+        String subtitle = call.getString(AuthActivity.SUBTITLE_KEY);
+        String description = call.getString(AuthActivity.DESCRIPTION_KEY);
+        String negativeButtonKey = call.getString(AuthActivity.NEGATIVE_BUTTON_KEY);
+        MetaData metaData = helper.loadMetaData(context, service, username);
+
+        BiometricPrompt.PromptInfo.Builder promptInfoBuilder = new BiometricPrompt.PromptInfo.Builder()
+                .setTitle(title != null ? title : "Authenticate")
+                .setSubtitle(subtitle)
+                .setDescription(description);
+
+        if (metaData != null && metaData.securityLevel == SecurityLevel.L3_USER_PRESENCE) {
+            promptInfoBuilder.setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG | BiometricManager.Authenticators.DEVICE_CREDENTIAL);
+        } else {
+            promptInfoBuilder.setNegativeButtonText(negativeButtonKey != null ? negativeButtonKey : "Cancel");
+            promptInfoBuilder.setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG);
+        }
+
+        BiometricPrompt.PromptInfo promptInfo = promptInfoBuilder.build();
+        Executor executor = ContextCompat.getMainExecutor(context);
+        BiometricPrompt biometricPrompt = new BiometricPrompt(getActivity(), executor, new BiometricPrompt.AuthenticationCallback() {
+            @Override
+            public void onAuthenticationError(int errorCode, @NonNull CharSequence errString) {
+                super.onAuthenticationError(errorCode, errString);
+                Log.d(TAG, "biometricResult received CANCELED");
+                call.resolve(SecureCredentialsResult.errorResult(SecureCredentialsError.failedToAccess).toJS());
+            }
+
+            @Override
+            public void onAuthenticationSucceeded(@NonNull BiometricPrompt.AuthenticationResult result) {
+                try {
+                    PrivateKey key = helper.getPrivateKey(context, service, username);
+                    Cipher cipher = helper.getCipher(key);
+                    String decryptedString = helper.decryptString(cipher, helper.getEncryptedData(context, service, username));
+
+                    Log.d(TAG, "biometricResult received OK");
+
+                    JSObject credential = new JSObject();
+                    credential.put(USERNAME_KEY, call.getString(USERNAME_KEY));
+                    credential.put(PASSWORD_KEY, decryptedString);
+                    call.resolve((new SecureCredentialsResult<>(true, credential)).toJS());
+
+                } catch (BadPaddingException | IllegalBlockSizeException e) {
+                    e.printStackTrace();
+                    Log.d(TAG, "biometricResult received CANCELED");
+                    call.resolve(SecureCredentialsResult.errorResult(SecureCredentialsError.failedToAccess).toJS());
+                }
+            }
+
+            @Override
+            public void onAuthenticationFailed() {
+                super.onAuthenticationFailed();
+                Log.d(TAG, "biometricResult received CANCELED");
+                call.resolve(SecureCredentialsResult.errorResult(SecureCredentialsError.failedToAccess).toJS());
+            }
+        });
+
+        biometricPrompt.authenticate(promptInfo);
     }
 
     @ActivityCallback
