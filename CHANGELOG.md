@@ -1,5 +1,11 @@
 # capacitor-secure-credentials-plugin
 
+## 1.1.1
+
+### Patch Changes
+
+- 2bfecee: Android: Present biometrics over current context
+
 ## 1.1.0
 
 ### Minor Changes
