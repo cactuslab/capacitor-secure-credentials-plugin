@@ -1,6 +1,6 @@
 {
   "name": "capacitor-secure-credentials-plugin",
-  "version": "1.1.1",
+  "version": "2.0.0",
   "description": "Saves credentials in a secure way",
   "main": "dist/plugin.cjs.js",
   "module": "dist/esm/index.js",
