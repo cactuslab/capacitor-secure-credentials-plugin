@@ -216,11 +216,14 @@ public class SecureCredentialsPlugin extends Plugin {
                 .setSubtitle(subtitle)
                 .setDescription(description);
 
+        boolean supportsOnlyWeakBiometrics = Build.VERSION.SDK_INT == Build.VERSION_CODES.Q || Build.VERSION.SDK_INT == Build.VERSION_CODES.P;
+        int biometricAuthenticator = supportsOnlyWeakBiometrics ? BiometricManager.Authenticators.BIOMETRIC_WEAK : BiometricManager.Authenticators.BIOMETRIC_STRONG;
+
         if (metaData != null && metaData.securityLevel == SecurityLevel.L3_USER_PRESENCE) {
-            promptInfoBuilder.setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG | BiometricManager.Authenticators.DEVICE_CREDENTIAL);
+            promptInfoBuilder.setAllowedAuthenticators(biometricAuthenticator | BiometricManager.Authenticators.DEVICE_CREDENTIAL);
         } else {
             promptInfoBuilder.setNegativeButtonText(negativeButtonKey != null ? negativeButtonKey : "Cancel");
-            promptInfoBuilder.setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG);
+            promptInfoBuilder.setAllowedAuthenticators(biometricAuthenticator);
         }
 
         BiometricPrompt.PromptInfo promptInfo = promptInfoBuilder.build();

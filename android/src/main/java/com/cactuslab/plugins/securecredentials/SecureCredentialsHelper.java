@@ -176,28 +176,25 @@ public class SecureCredentialsHelper {
 
     public SecurityLevel maximumSupportedLevel(Context context) {
         BiometricManager biometricManager = BiometricManager.from(context);
-        switch (biometricManager.canAuthenticate(BIOMETRIC_STRONG | DEVICE_CREDENTIAL)) {
-            case BiometricManager.BIOMETRIC_SUCCESS:
+        boolean supportsOnlyWeakBiometrics = Build.VERSION.SDK_INT == Build.VERSION_CODES.Q || Build.VERSION.SDK_INT == Build.VERSION_CODES.P;
+        int biometricAuthenticator = supportsOnlyWeakBiometrics ? BiometricManager.Authenticators.BIOMETRIC_WEAK : BiometricManager.Authenticators.BIOMETRIC_STRONG;
+        switch (biometricManager.canAuthenticate(biometricAuthenticator | DEVICE_CREDENTIAL)) {
+            case BiometricManager.BIOMETRIC_SUCCESS -> {
                 Log.d(TAG, "App can authenticate using biometrics.");
-                return SecurityLevel.L4_BIOMETRICS;
-            case BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE:
-                Log.d(TAG, "No biometric features available on this device.");
-                break;
-            case BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE:
-                Log.d(TAG, "Biometric features are currently unavailable.");
-                break;
-            case BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED:
-                Log.d(TAG, "Biometrics on this device haven't been set up");
-                break;
-            case BiometricManager.BIOMETRIC_ERROR_SECURITY_UPDATE_REQUIRED:
-                Log.d(TAG, "Biometrics requires a security update");
-                break;
-            case BiometricManager.BIOMETRIC_ERROR_UNSUPPORTED:
-                Log.d(TAG, "Biometrics is not supported on this device");
-                break;
-            case BiometricManager.BIOMETRIC_STATUS_UNKNOWN:
-                Log.d(TAG, "Biometrics is presenting an unknown error. Assume it can't be used");
-                break;
+                return supportsOnlyWeakBiometrics ? SecurityLevel.L3_USER_PRESENCE : SecurityLevel.L4_BIOMETRICS;
+            }
+            case BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE ->
+                    Log.d(TAG, "No biometric features available on this device.");
+            case BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE ->
+                    Log.d(TAG, "Biometric features are currently unavailable.");
+            case BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED ->
+                    Log.d(TAG, "Biometrics on this device haven't been set up");
+            case BiometricManager.BIOMETRIC_ERROR_SECURITY_UPDATE_REQUIRED ->
+                    Log.d(TAG, "Biometrics requires a security update");
+            case BiometricManager.BIOMETRIC_ERROR_UNSUPPORTED ->
+                    Log.d(TAG, "Biometrics is not supported on this device");
+            case BiometricManager.BIOMETRIC_STATUS_UNKNOWN ->
+                    Log.d(TAG, "Biometrics is presenting an unknown error. Assume it can't be used");
         }
         if (biometricManager.canAuthenticate(DEVICE_CREDENTIAL) == BiometricManager.BIOMETRIC_SUCCESS) {
             return SecurityLevel.L3_USER_PRESENCE;
