@@ -1,5 +1,12 @@
 # capacitor-secure-credentials-plugin
 
+## 2.0.1
+
+### Patch Changes
+
+- a02aaf6: package: update capacitor
+- 3a9a751: android: Fix android 28 & 29 support for biometric reporting
+
 ## 2.0.0
 
 ### Major Changes
