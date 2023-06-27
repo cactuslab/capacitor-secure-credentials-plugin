@@ -105,19 +105,17 @@ public class SecureCredentialsHelper {
             case L2_DEVICE_UNLOCKED:
                 break;
             case L3_USER_PRESENCE:
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    builder.setUserAuthenticationRequired(true);
-                    builder.setUserAuthenticationParameters(timeout, KeyProperties.AUTH_BIOMETRIC_STRONG | KeyProperties.AUTH_DEVICE_CREDENTIAL);
-                } else {
-                    builder.setUserAuthenticationRequired(true);
-                    builder.setUserAuthenticationValidityDurationSeconds(timeout);
-                }
-                break;
             case L4_BIOMETRICS:
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    builder.setUserAuthenticationRequired(true);
-                    builder.setUserAuthenticationParameters(timeout, KeyProperties.AUTH_BIOMETRIC_STRONG );
+                    if (Build.MANUFACTURER.toLowerCase().contains("samsung")) {
+                        builder.setUserAuthenticationRequired(false);
+                    } else {
+                        builder.setUserAuthenticationRequired(true);
+                    }
+
+                    builder.setUserAuthenticationParameters(timeout, KeyProperties.AUTH_BIOMETRIC_STRONG | KeyProperties.AUTH_DEVICE_CREDENTIAL);
                 } else {
+//                    builder.setInvalidatedByBiometricEnrollment(true);
                     builder.setUserAuthenticationRequired(true);
                     builder.setUserAuthenticationValidityDurationSeconds(timeout);
                 }

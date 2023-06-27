@@ -217,15 +217,17 @@ public class SecureCredentialsPlugin extends Plugin {
                 .setDescription(description);
 
         boolean supportsOnlyWeakBiometrics = Build.VERSION.SDK_INT == Build.VERSION_CODES.Q || Build.VERSION.SDK_INT == Build.VERSION_CODES.P;
-        int biometricAuthenticator = supportsOnlyWeakBiometrics ? BiometricManager.Authenticators.BIOMETRIC_WEAK : BiometricManager.Authenticators.BIOMETRIC_STRONG;
+        int biometricAuthenticator = supportsOnlyWeakBiometrics ? BiometricManager.Authenticators.BIOMETRIC_WEAK : BiometricManager.Authenticators.BIOMETRIC_STRONG | BiometricManager.Authenticators.BIOMETRIC_WEAK;
 
         if (metaData != null && metaData.securityLevel == SecurityLevel.L3_USER_PRESENCE) {
+            promptInfoBuilder.setNegativeButtonText(negativeButtonKey != null ? negativeButtonKey : "Cancel");
             promptInfoBuilder.setAllowedAuthenticators(biometricAuthenticator | BiometricManager.Authenticators.DEVICE_CREDENTIAL);
         } else {
             promptInfoBuilder.setNegativeButtonText(negativeButtonKey != null ? negativeButtonKey : "Cancel");
             promptInfoBuilder.setAllowedAuthenticators(biometricAuthenticator);
         }
 
+        promptInfoBuilder.setConfirmationRequired(false);
         BiometricPrompt.PromptInfo promptInfo = promptInfoBuilder.build();
         Executor executor = ContextCompat.getMainExecutor(context);
         BiometricPrompt biometricPrompt = new BiometricPrompt(getActivity(), executor, new BiometricPrompt.AuthenticationCallback() {
