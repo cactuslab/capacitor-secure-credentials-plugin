@@ -7,10 +7,30 @@ export enum SecurityErrorCode {
 }
 
 export enum SecurityLevel {
+    /**
+     * Basic encryption of the credential. This credential can be accessed by the application
+     * running in the background while the device is locked.
+     */
     L1_Encrypted = 1,
+    /**
+     * The Device needs to be unlocked in order to read the credential.
+     */
     L2_DeviceUnlocked = 2,
+    /**
+     * A device pin challenge will need to be completed before the credential is revealed. 
+     */
     L3_UserPresence = 3,
+    /** 
+     * A biometric challenge will need to be completed before the credential is revealed.
+     * It it not guaranteed that the data is encrypted using biometric data.
+     */
     L4_Biometrics = 4,
+    /**
+     * The credential will be encrypted using biometrics in the hardware secure enclave.
+     * Typically, adding or removing biometric data such as a new fingerprint may
+     * invalidate the data.
+     */
+    L5_BiometricEncrypted = 5,
 }
 
 export interface Credential {
