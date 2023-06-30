@@ -8,29 +8,30 @@ export enum SecurityErrorCode {
 
 export enum SecurityLevel {
     /**
-     * Basic encryption of the credential. This credential can be accessed by the application
-     * running in the background while the device is locked.
+     * The credential will be stored encrypted, but it can be accessed by the application while the device is locked.
      */
     L1_Encrypted = 1,
     /**
-     * The Device needs to be unlocked in order to read the credential.
+     * The credential will be stored encrypted, and it can only be accessed by the application when the
+     * device is unlocked.
      */
     L2_DeviceUnlocked = 2,
     /**
-     * A device pin challenge will need to be completed before the credential is revealed. 
+     * The credential will be stored encrypted, and it can only be accessed by the application after the OS
+     * confirms the user is present by means of a challenge. The OS may remember that the user is
+     * present for a configured period of time after a device PIN challenge.
      */
     L3_UserPresence = 3,
-    /** 
-     * A biometric challenge will need to be completed before the credential is revealed.
-     * It it not guaranteed that the data is encrypted using biometric data.
-     */
-    L4_Biometrics = 4,
-    /**
-     * The credential will be encrypted using biometrics in the hardware secure enclave.
-     * Typically, adding or removing biometric data such as a new fingerprint may
-     * invalidate the data.
-     */
-    L5_BiometricEncrypted = 5,
+}
+
+type Opaque<K, T> = T & { __TYPE__: K }
+
+export type SecurityStrategyName = Opaque<'SecurityStrategyName', string>
+
+export interface SecurityStrategy {
+    name: SecurityStrategyName
+    level: SecurityLevel
+    biometrics: boolean
 }
 
 export interface Credential {
@@ -49,7 +50,7 @@ export interface Failure<E> {
 }
 
 export interface CredentialOptions {
-    securityLevel?: SecurityLevel
+    strategy: SecurityStrategyName
 }
 export interface SecureCredentialsError {
     code: SecurityErrorCode;
@@ -83,12 +84,11 @@ export interface SecureCredentialsPlugin {
     /** 
      * Set a credential into the secure store. This will overwrite any existing credential of the same service and username. 
      */
-    setCredential(options: {service: string, credential: Credential, options?: CredentialOptions}): Promise<Success<boolean> | Failure<SecureCredentialsError>>;
+    setCredential(options: {service: string, credential: Credential, options: CredentialOptions}): Promise<Success<boolean> | Failure<SecureCredentialsError>>;
     /**
-     * Determine the maximum security level supported on the platform.
-     * This may change over the course of an application's lifetime as users may add or remove pins or biometric scanning features.
+     * Returns the available strategies for storing credentials, sorted strongest to weakest.
      */
-    maximumSecurityLevel(): Promise<Success<SecurityLevel> | Failure<SecureCredentialsError>>
+    availableSecurityStrategies(): Promise<Success<SecurityStrategy[]> | Failure<SecureCredentialsError>>
     /**
      * Determine the device capabilities for biometric scanning features. A device may have any combination of sensors and the sensors
      * available may change depending on whether a user has granted permission to inspect the device sensors or whether they are enrolled
