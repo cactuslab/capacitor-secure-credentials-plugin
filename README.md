@@ -18,9 +18,10 @@ npx cap sync
 * [`removeCredential(...)`](#removecredential)
 * [`removeCredentials(...)`](#removecredentials)
 * [`setCredential(...)`](#setcredential)
-* [`maximumSecurityLevel()`](#maximumsecuritylevel)
+* [`availableSecurityStrategies()`](#availablesecuritystrategies)
 * [`supportedBiometricSensors()`](#supportedbiometricsensors)
 * [Interfaces](#interfaces)
+* [Type Aliases](#type-aliases)
 * [Enums](#enums)
 
 </docgen-index>
@@ -100,30 +101,29 @@ Remove all credentials belonging to a service
 ### setCredential(...)
 
 ```typescript
-setCredential(options: { service: string; credential: Credential; options?: CredentialOptions; }) => Promise<Success<boolean> | Failure<SecureCredentialsError>>
+setCredential(options: { service: string; credential: Credential; options: CredentialOptions; }) => Promise<Success<boolean> | Failure<SecureCredentialsError>>
 ```
 
 Set a credential into the secure store. This will overwrite any existing credential of the same service and username.
 
-| Param         | Type                                                                                                                                              |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **`options`** | <code>{ service: string; credential: <a href="#credential">Credential</a>; options?: <a href="#credentialoptions">CredentialOptions</a>; }</code> |
+| Param         | Type                                                                                                                                             |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **`options`** | <code>{ service: string; credential: <a href="#credential">Credential</a>; options: <a href="#credentialoptions">CredentialOptions</a>; }</code> |
 
 **Returns:** <code>Promise&lt;<a href="#failure">Failure</a>&lt;<a href="#securecredentialserror">SecureCredentialsError</a>&gt; | <a href="#success">Success</a>&lt;boolean&gt;&gt;</code>
 
 --------------------
 
 
-### maximumSecurityLevel()
+### availableSecurityStrategies()
 
 ```typescript
-maximumSecurityLevel() => Promise<Success<SecurityLevel> | Failure<SecureCredentialsError>>
+availableSecurityStrategies() => Promise<Success<SecurityStrategy[]> | Failure<SecureCredentialsError>>
 ```
 
-Determine the maximum security level supported on the platform.
-This may change over the course of an application's lifetime as users may add or remove pins or biometric scanning features.
+Returns the available strategies for storing credentials, sorted strongest to weakest.
 
-**Returns:** <code>Promise&lt;<a href="#failure">Failure</a>&lt;<a href="#securecredentialserror">SecureCredentialsError</a>&gt; | <a href="#success">Success</a>&lt;<a href="#securitylevel">SecurityLevel</a>&gt;&gt;</code>
+**Returns:** <code>Promise&lt;<a href="#failure">Failure</a>&lt;<a href="#securecredentialserror">SecureCredentialsError</a>&gt; | <a href="#success">Success</a>&lt;SecurityStrategy[]&gt;&gt;</code>
 
 --------------------
 
@@ -180,9 +180,18 @@ with those sensors. Not all devices advertise what sensors they have. The inform
 
 #### CredentialOptions
 
-| Prop                | Type                                                    |
-| ------------------- | ------------------------------------------------------- |
-| **`securityLevel`** | <code><a href="#securitylevel">SecurityLevel</a></code> |
+| Prop           | Type                                                                  |
+| -------------- | --------------------------------------------------------------------- |
+| **`strategy`** | <code><a href="#securitystrategyname">SecurityStrategyName</a></code> |
+
+
+#### SecurityStrategy
+
+| Prop             | Type                                                                  |
+| ---------------- | --------------------------------------------------------------------- |
+| **`name`**       | <code><a href="#securitystrategyname">SecurityStrategyName</a></code> |
+| **`level`**      | <code><a href="#securitylevel">SecurityLevel</a></code>               |
+| **`biometrics`** | <code>boolean</code>                                                  |
 
 
 #### BiometricSensors
@@ -192,6 +201,19 @@ with those sensors. Not all devices advertise what sensors they have. The inform
 | **`face`**        | <code>boolean</code> |
 | **`fingerprint`** | <code>boolean</code> |
 | **`iris`**        | <code>boolean</code> |
+
+
+### Type Aliases
+
+
+#### SecurityStrategyName
+
+<code><a href="#opaque">Opaque</a>&lt;'<a href="#securitystrategyname">SecurityStrategyName</a>', string&gt;</code>
+
+
+#### Opaque
+
+<code>T & { __TYPE__: K }</code>
 
 
 ### Enums
@@ -210,11 +232,10 @@ with those sensors. Not all devices advertise what sensors they have. The inform
 
 #### SecurityLevel
 
-| Members                 | Value          |
-| ----------------------- | -------------- |
-| **`L1_Encrypted`**      | <code>1</code> |
-| **`L2_DeviceUnlocked`** | <code>2</code> |
-| **`L3_UserPresence`**   | <code>3</code> |
-| **`L4_Biometrics`**     | <code>4</code> |
+| Members                 | Value          | Description                                                                                                                                                                                                                                                           |
+| ----------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`L1_Encrypted`**      | <code>1</code> | The credential will be stored encrypted, but it can be accessed by the application while the device is locked.                                                                                                                                                        |
+| **`L2_DeviceUnlocked`** | <code>2</code> | The credential will be stored encrypted, and it can only be accessed by the application when the device is unlocked.                                                                                                                                                  |
+| **`L3_UserPresence`**   | <code>3</code> | The credential will be stored encrypted, and it can only be accessed by the application after the OS confirms the user is present by means of a challenge. The OS may remember that the user is present for a configured period of time after a device PIN challenge. |
 
 </docgen-api>
