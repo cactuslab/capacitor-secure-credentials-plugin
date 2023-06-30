@@ -54,7 +54,7 @@ public class SecureCredentialsPlugin extends Plugin {
     private static final String PASSWORD_KEY = "password";
     private static final String OPTIONS_KEY = "options";
     private static final String CREDENTIAL_KEY = "credential";
-    private static final String SECURITY_LEVEL_KEY = "securityLevel";
+    private static final String STRATEGY_KEY = "strategy";
     private static final String BIO_FACE_KEY = "face";
     private static final String BIO_IRIS_KEY = "iris";
     private static final String BIO_FINGER_KEY = "fingerprint";
@@ -71,7 +71,7 @@ public class SecureCredentialsPlugin extends Plugin {
         JSObject options = call.getObject(OPTIONS_KEY, new JSObject());
         assert options != null;
 
-        SecurityStrategyName securityStrategy = SecurityStrategyName.get(options.getString(SECURITY_LEVEL_KEY));
+        SecurityStrategyName securityStrategy = SecurityStrategyName.get(options.getString(STRATEGY_KEY));
         Log.d(TAG, "setCredential for security strategy [" + securityStrategy.name + "]");
         call.resolve(setCredential(service, username, password, securityStrategy).toJS());
     }
