@@ -1,5 +1,11 @@
 # capacitor-secure-credentials-plugin
 
+## 3.0.0
+
+### Major Changes
+
+- d20b218: Manage credentials using Strategies in place of Security Levels
+
 ## 2.0.1
 
 ### Patch Changes
