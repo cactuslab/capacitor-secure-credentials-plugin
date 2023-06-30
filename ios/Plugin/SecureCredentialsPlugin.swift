@@ -17,7 +17,13 @@ public class SecureCredentialsPlugin: CAPPlugin {
             return
         }
         
-        let options = Options(jsObject: call.getObject(.kOptions))
+        let options: Options
+        do {
+            options = try Options(jsObject: call.getObject(.kOptions))
+        } catch {
+            call.resolve(Failure(error: error).toJS())
+            return
+        }
         
         let searchQuery: [String: Any] = [kSecClass as String: kSecClassInternetPassword,
                                           kSecAttrServer as String: service,
@@ -152,8 +158,8 @@ public class SecureCredentialsPlugin: CAPPlugin {
         call.resolve(BooleanSuccess.toJS())
     }
     
-    @objc func maximumSecurityLevel(_ call: CAPPluginCall) {
-        call.resolve(Success(result: maximumSupportedSecurityLevel().rawValue).toJS())
+    @objc func availableSecurityStrategies(_ call: CAPPluginCall) {
+        call.resolve(Success(result: availableSecurityStrategies()).toJS())
     }
     
     @objc func supportedBiometricSensors(_ call: CAPPluginCall) {
@@ -174,41 +180,45 @@ public class SecureCredentialsPlugin: CAPPlugin {
         }
     }
     
-    private func maximumSupportedSecurityLevel() -> SecurityLevel {
+    private func availableSecurityStrategies() -> [SecurityStrategy] {
+        var result: [SecurityStrategy] = []
+        
         let context = LAContext()
         var error: NSError? = nil
         if context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) {
-            return .L4_Biometrics
+            result.append(SecurityStrategy(name: .UserPresenceBiometrics, level: .L3_UserPresence, biometrics: true, description: "Biometrics user-presence"))
         }
         error = nil
         if context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error) {
             /* We can perform L2 and L3 if we can authenticate the device owner */
-            return .L3_UserPresence
+            result.append(SecurityStrategy(name: .UserPresence, level: .L3_UserPresence, biometrics: false, description: "Device PIN user-presence"))
+            result.append(SecurityStrategy(name: .DeviceUnlocked, level: .L2_DeviceUnlocked, biometrics: false, description: "Device Unlocked"))
         }
         
         /* The keychain is always available */
-        return .L1_Encrypted
+        result.append(SecurityStrategy(name: .Encrypted, level: .L1_Encrypted, biometrics: false, description: "Encrypted"))
+        return result
     }
     
     private func applyOptionsToQuery(_ query: [String: Any], options: Options) -> [String: Any] {
         var query = query
                 
-        switch options.securityLevel {
-        case .L1_Encrypted:
+        switch options.strategy {
+        case .Encrypted:
             break
-        case .L2_DeviceUnlocked:
+        case .DeviceUnlocked:
             query[kSecAttrAccessControl as String] = SecAccessControlCreateWithFlags(nil, // Use the default allocator.
                                                                                      kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly,
                                                                                      [],
                                                                                      nil) // Ignore any error.
             break
-        case .L3_UserPresence:
+        case .UserPresence:
             query[kSecAttrAccessControl as String] = SecAccessControlCreateWithFlags(nil, // Use the default allocator.
                                                                                      kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly,
                                                                                      .userPresence,
                                                                                      nil) // Ignore any error.
             break
-        case .L4_Biometrics:
+        case .UserPresenceBiometrics:
             query[kSecAttrAccessControl as String] = SecAccessControlCreateWithFlags(nil, // Use the default allocator.
                                                                                      kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly,
                                                                                      .biometryCurrentSet,
@@ -264,7 +274,7 @@ public class SecureCredentialsPlugin: CAPPlugin {
     
     private func addAccount(service: String, username: String) throws {
         let credentialsService = "\(service).\(accountsService)"
-        try save(service: credentialsService, credential: Credential(username: username, password: username), options: Options(securityLevel: .L1_Encrypted))
+        try save(service: credentialsService, credential: Credential(username: username, password: username), options: Options(strategy: .Encrypted))
     }
     
     private func removeAccount(service: String, username: String) throws {
@@ -448,22 +458,48 @@ private enum SecurityLevel: Int, Comparable {
     case L1_Encrypted = 1
     case L2_DeviceUnlocked = 2
     case L3_UserPresence = 3
-    case L4_Biometrics = 4
+}
+
+private struct SecurityStrategy {
+    var name: SecurityStrategyName
+    var level: SecurityLevel
+    var biometrics: Bool
+    var description: String
+}
+
+extension SecurityStrategy: JsAble {
+    
+    func toJS() -> [String : Any] {
+        var result: [String : Any] = [:]
+        result["name"] = self.name.rawValue
+        result["level"] = self.level.rawValue
+        result["biometrics"] = self.biometrics
+        result["description"] = self.description
+        return result
+    }
+    
+}
+
+private enum SecurityStrategyName: String {
+    case Encrypted = "Encrypted"
+    case DeviceUnlocked = "DeviceUnlocked"
+    case UserPresence = "UserPresence"
+    case UserPresenceBiometrics = "UserPresenceBiometrics"
 }
 
 private struct Options {
-    let securityLevel : SecurityLevel
+    let strategy: SecurityStrategyName
     
-    init(jsObject: JSObject?) {
-        if let securityLevelValue = jsObject?[.kSecurityLevel] as? Int, let level = SecurityLevel(rawValue: securityLevelValue) {
-            securityLevel = level
+    init(jsObject: JSObject?) throws {
+        if let strategyValue = jsObject?[.kStrategy] as? String, let strategy = SecurityStrategyName(rawValue: strategyValue) {
+            self.strategy = strategy
         } else {
-            securityLevel = .L4_Biometrics
+            throw SecureCredentialsError.params(message: "Missing or invalid strategy")
         }
     }
     
-    init(securityLevel: SecurityLevel) {
-        self.securityLevel = securityLevel
+    init(strategy: SecurityStrategyName) {
+        self.strategy = strategy
     }
 }
 
@@ -472,7 +508,7 @@ private extension String {
     static let kUsername = "username"
     static let kPassword = "password"
     static let kOptions = "options"
-    static let kSecurityLevel = "securityLevel"
+    static let kStrategy = "strategy"
     static let kUsernames = "usernames"
     static let kCredential = "credential"
     static let kCredentials = "credentials"
