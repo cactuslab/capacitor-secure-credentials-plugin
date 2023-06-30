@@ -8,8 +8,7 @@ import java.util.Map;
 public enum SecurityLevel {
     L1_ENCRYPTED (1),
     L2_DEVICE_UNLOCKED (2),
-    L3_USER_PRESENCE (3),
-    L4_BIOMETRICS (4);
+    L3_USER_PRESENCE (3);
 
     final int value;
 

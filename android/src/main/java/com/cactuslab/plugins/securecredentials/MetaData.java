@@ -5,21 +5,21 @@ import org.json.JSONObject;
 
 public class MetaData {
 
-    final SecurityLevel securityLevel;
+    final SecurityStrategyName securityLevel;
 
-    private static final String SECURITY_LEVEL_KEY = "sLevel";
+    private static final String SECURITY_LEVEL_KEY = "strategy";
 
-    MetaData(SecurityLevel level) {
+    MetaData(SecurityStrategyName level) {
         this.securityLevel = level;
     }
 
     MetaData(JSONObject jsonObject) throws JSONException {
-        this.securityLevel = SecurityLevel.get(jsonObject.getInt(SECURITY_LEVEL_KEY));
+        this.securityLevel = SecurityStrategyName.get(jsonObject.getString(SECURITY_LEVEL_KEY));
     }
 
     JSONObject asJson() throws JSONException {
         JSONObject object = new JSONObject();
-        object.put(SECURITY_LEVEL_KEY, securityLevel.value);
+        object.put(SECURITY_LEVEL_KEY, securityLevel.name);
         return object;
     }
 }

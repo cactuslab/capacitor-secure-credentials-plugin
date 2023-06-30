@@ -1,6 +1,7 @@
 package com.cactuslab.plugins.securecredentials;
 
 import android.annotation.SuppressLint;
+import android.app.KeyguardManager;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Build;
@@ -23,6 +24,7 @@ import java.io.IOException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.KeyFactory;
+import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -35,8 +37,10 @@ import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.security.spec.AlgorithmParameterSpec;
 import java.security.spec.InvalidKeySpecException;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
+import java.util.List;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -73,7 +77,7 @@ public class SecureCredentialsHelper {
         return context.getPackageName() + "." + service + "." + username;
     }
 
-    public void createKey(Context context, @NonNull String service, @NonNull String username, @NonNull SecurityLevel securityLevel) throws NoSuchProviderException, NoSuchAlgorithmException, InvalidAlgorithmParameterException, JSONException {
+    public void createKey(Context context, @NonNull String service, @NonNull String username, @NonNull SecurityStrategyName securityStrategy) throws NoSuchProviderException, NoSuchAlgorithmException, InvalidAlgorithmParameterException, JSONException {
         String alias = alias(context, service, username);
 
         if (isKeyAvailable(context, service, username)) {
@@ -91,6 +95,8 @@ public class SecureCredentialsHelper {
         Calendar end = new GregorianCalendar();
         end.add(Calendar.YEAR, 30);
 
+        BiometricManager biometricManager = BiometricManager.from(context);
+
         // Specify the parameters object which will be passed to KeyPairGenerator
         KeyGenParameterSpec.Builder builder = new KeyGenParameterSpec.Builder(alias, KeyProperties.PURPOSE_DECRYPT)
                 .setKeyValidityStart(start.getTime())
@@ -100,26 +106,27 @@ public class SecureCredentialsHelper {
 
         int timeout = 100; // On android 8 this needs to be greater than zero, otherwise the key is not ever unlockable
 
-        switch (securityLevel) {
-            case L1_ENCRYPTED:
-            case L2_DEVICE_UNLOCKED:
-                break;
-            case L3_USER_PRESENCE:
-            case L4_BIOMETRICS:
+        switch (securityStrategy) {
+            case STANDARD -> {}
+            case STANDARD_PLUS_BIO_CHECK -> {}
+            case PIN_USER_PRESENCE -> {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    if (Build.MANUFACTURER.toLowerCase().contains("samsung")) {
-                        builder.setUserAuthenticationRequired(false);
-                    } else {
-                        builder.setUserAuthenticationRequired(true);
-                    }
-
-                    builder.setUserAuthenticationParameters(timeout, KeyProperties.AUTH_BIOMETRIC_STRONG | KeyProperties.AUTH_DEVICE_CREDENTIAL);
+                    builder.setUserAuthenticationRequired(true);
+                    builder.setUserAuthenticationParameters(timeout, KeyProperties.AUTH_DEVICE_CREDENTIAL);
                 } else {
-//                    builder.setInvalidatedByBiometricEnrollment(true);
                     builder.setUserAuthenticationRequired(true);
                     builder.setUserAuthenticationValidityDurationSeconds(timeout);
                 }
-                break;
+            }
+            case STRONG_USER_PRESENCE -> {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    builder.setUserAuthenticationRequired(true);
+                    builder.setUserAuthenticationParameters(timeout, KeyProperties.AUTH_BIOMETRIC_STRONG);
+                } else {
+                    builder.setUserAuthenticationRequired(true);
+                    builder.setUserAuthenticationValidityDurationSeconds(timeout);
+                }
+            }
         }
 
         AlgorithmParameterSpec spec = builder.build();
@@ -129,10 +136,10 @@ public class SecureCredentialsHelper {
         kpGenerator = KeyPairGenerator.getInstance(KEY_ALGORITHM_RSA, KEYSTORE_PROVIDER_ANDROID_KEYSTORE);
         kpGenerator.initialize(spec);
         // Generate private/public keys
-        kpGenerator.generateKeyPair();
+        KeyPair pair = kpGenerator.generateKeyPair();
 
         Log.i(TAG, "New key created. IsHardwareBacked? " + isKeyHardwareBacked(context, service, username));
-        saveMetaData(context, service, username, new MetaData(securityLevel));
+        saveMetaData(context, service, username, new MetaData(securityStrategy));
     }
 
     // Check if device support Hardware-backed keystore
@@ -172,32 +179,61 @@ public class SecureCredentialsHelper {
         return false;
     }
 
-    public SecurityLevel maximumSupportedLevel(Context context) {
-        BiometricManager biometricManager = BiometricManager.from(context);
-        boolean supportsOnlyWeakBiometrics = Build.VERSION.SDK_INT == Build.VERSION_CODES.Q || Build.VERSION.SDK_INT == Build.VERSION_CODES.P;
-        int biometricAuthenticator = supportsOnlyWeakBiometrics ? BiometricManager.Authenticators.BIOMETRIC_WEAK : BiometricManager.Authenticators.BIOMETRIC_STRONG;
-        switch (biometricManager.canAuthenticate(biometricAuthenticator | DEVICE_CREDENTIAL)) {
-            case BiometricManager.BIOMETRIC_SUCCESS -> {
-                Log.d(TAG, "App can authenticate using biometrics.");
-                return supportsOnlyWeakBiometrics ? SecurityLevel.L3_USER_PRESENCE : SecurityLevel.L4_BIOMETRICS;
-            }
+    private void logBiometricErrorResult(int result, String biometric) {
+        switch (result) {
             case BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE ->
-                    Log.d(TAG, "No biometric features available on this device.");
+                    Log.d(TAG, "No " + biometric + " features available on this device.");
             case BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE ->
-                    Log.d(TAG, "Biometric features are currently unavailable.");
+                    Log.d(TAG, biometric + " features are currently unavailable.");
             case BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED ->
-                    Log.d(TAG, "Biometrics on this device haven't been set up");
+                    Log.d(TAG, biometric + " on this device haven't been set up");
             case BiometricManager.BIOMETRIC_ERROR_SECURITY_UPDATE_REQUIRED ->
-                    Log.d(TAG, "Biometrics requires a security update");
+                    Log.d(TAG, biometric + " requires a security update");
             case BiometricManager.BIOMETRIC_ERROR_UNSUPPORTED ->
-                    Log.d(TAG, "Biometrics is not supported on this device");
+                    Log.d(TAG, biometric + " is not supported on this device");
             case BiometricManager.BIOMETRIC_STATUS_UNKNOWN ->
-                    Log.d(TAG, "Biometrics is presenting an unknown error. Assume it can't be used");
+                    Log.d(TAG, biometric + " is presenting an unknown error. Assume it can't be used");
+            default -> {}
         }
-        if (biometricManager.canAuthenticate(DEVICE_CREDENTIAL) == BiometricManager.BIOMETRIC_SUCCESS) {
-            return SecurityLevel.L3_USER_PRESENCE;
+    }
+
+    public SecurityStrategy[] availableSecurityStrategies(Context context) {
+        List<SecurityStrategy> strategies = new ArrayList<>();
+
+        BiometricManager biometricManager = BiometricManager.from(context);
+        int strongResult = biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG);
+        if (strongResult == BiometricManager.BIOMETRIC_SUCCESS) {
+            Log.d(TAG, "App can authenticate using strong biometrics.");
+            strategies.add(new SecurityStrategy(SecurityStrategyName.STRONG_USER_PRESENCE, SecurityLevel.L3_USER_PRESENCE, true));
+        } else {
+            logBiometricErrorResult(strongResult, "Strong Biometric");
         }
-        return SecurityLevel.L1_ENCRYPTED;
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            int deviceCredentialResult = biometricManager.canAuthenticate(DEVICE_CREDENTIAL);
+            if (deviceCredentialResult == BiometricManager.BIOMETRIC_SUCCESS) {
+                Log.d(TAG, "App can authenticate using device credential.");
+                strategies.add(new SecurityStrategy(SecurityStrategyName.PIN_USER_PRESENCE, SecurityLevel.L3_USER_PRESENCE, false));
+            } else {
+                logBiometricErrorResult(deviceCredentialResult, "Device Credential");
+            }
+        } else if (Build.VERSION.SDK_INT == Build.VERSION_CODES.P || Build.VERSION.SDK_INT == Build.VERSION_CODES.Q) {
+            // TODO: Use KeyguardManager to determine limits
+            // KeyguardManager keyguardManager = (KeyguardManager)getSystemService(Activity.KEYGUARD_SERVICE);
+            // keyguardManager.isDeviceSecure()
+            // Log.v(TAG,""+keyguardManager.inKeyguardRestrictedInputMode());
+        }
+
+        int weakResult = biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_WEAK);
+        if (weakResult == BiometricManager.BIOMETRIC_SUCCESS) {
+            Log.d(TAG, "App can authenticate using weak biometrics.");
+            strategies.add(new SecurityStrategy(SecurityStrategyName.STANDARD_PLUS_BIO_CHECK, SecurityLevel.L1_ENCRYPTED, true));
+        } else {
+            logBiometricErrorResult(weakResult, "Weak Biometric");
+        }
+
+        strategies.add(new SecurityStrategy(SecurityStrategyName.STANDARD, SecurityLevel.L1_ENCRYPTED, false));
+        return strategies.toArray(new SecurityStrategy[0]);
     }
 
     public String[] usernamesForService(Context context, @Nullable String service) {
@@ -334,6 +370,17 @@ public class SecureCredentialsHelper {
     }
 
     @Nullable
+    public Cipher makeCipher() {
+        try {
+            Cipher cipher = Cipher.getInstance(RSA_ECB_PKCS1_PADDING);
+            return cipher;
+        } catch (NoSuchAlgorithmException | NoSuchPaddingException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    @Nullable
     public Cipher getCipher(PrivateKey key) {
         try {
             Cipher cipher = Cipher.getInstance(RSA_ECB_PKCS1_PADDING);
@@ -341,8 +388,8 @@ public class SecureCredentialsHelper {
             return cipher;
         } catch (NoSuchAlgorithmException | InvalidKeyException | NoSuchPaddingException e) {
             e.printStackTrace();
+            return null;
         }
-        return null;
     }
 
     @Nullable
@@ -395,5 +442,6 @@ public class SecureCredentialsHelper {
         }
         return null;
     }
+
 
 }

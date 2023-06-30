@@ -13,6 +13,7 @@ import androidx.biometric.BiometricManager;
 import androidx.biometric.BiometricPrompt;
 import androidx.core.content.ContextCompat;
 
+import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
@@ -20,6 +21,7 @@ import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.ActivityCallback;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 
 import java.io.IOException;
@@ -31,6 +33,7 @@ import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
+import java.util.List;
 import java.util.concurrent.Executor;
 
 import javax.crypto.BadPaddingException;
@@ -68,9 +71,9 @@ public class SecureCredentialsPlugin extends Plugin {
         JSObject options = call.getObject(OPTIONS_KEY, new JSObject());
         assert options != null;
 
-        SecurityLevel securityLevel = SecurityLevel.get(options.getInteger(SECURITY_LEVEL_KEY, helper.maximumSupportedLevel(getContext()).value));
-        Log.d(TAG, "setCredential for security level [" + securityLevel.value + "]");
-        call.resolve(setCredential(service, username, password, securityLevel).toJS());
+        SecurityStrategyName securityStrategy = SecurityStrategyName.get(options.getString(SECURITY_LEVEL_KEY));
+        Log.d(TAG, "setCredential for security strategy [" + securityStrategy.name + "]");
+        call.resolve(setCredential(service, username, password, securityStrategy).toJS());
     }
 
     @PluginMethod
@@ -84,26 +87,24 @@ public class SecureCredentialsPlugin extends Plugin {
         MetaData metaData = helper.loadMetaData(getContext(), service, username);
         PrivateKey key = helper.getPrivateKey(getContext(), service, username);
         String encryptedData = helper.getEncryptedData(getContext(), service, username);
-        if (metaData == null || encryptedData == null || key == null) {
+        if (metaData == null || encryptedData == null || key == null || metaData.securityLevel == null) {
             Log.d(TAG, "getCredential Error NoData");
             call.resolve(SecureCredentialsResult.errorResult(SecureCredentialsError.noData).toJS());
             return;
         }
 
+        Log.d(TAG, "getCredential " + metaData.securityLevel.name);
         switch (metaData.securityLevel) {
-            case L1_ENCRYPTED:
-            case L2_DEVICE_UNLOCKED:
-                Log.d(TAG, "getCredential L1, L2");
+            case STANDARD -> {
                 call.resolve(getCredential(service, username).toJS());
-                break;
-            case L3_USER_PRESENCE:
-            case L4_BIOMETRICS:
-                Log.d(TAG, "getCredential L3, L4");
-                getActivity().runOnUiThread(() -> startBiometricLight(call, service, username));
-                break;
-            default:
-                Log.d(TAG, "getCredential Fallthrough. Unexpected security level [" + metaData.securityLevel.value + "]");
+            }
+            case STANDARD_PLUS_BIO_CHECK, PIN_USER_PRESENCE, STRONG_USER_PRESENCE -> {
+                getActivity().runOnUiThread(() -> startBiometricPrompt(call, service, username, metaData.securityLevel));
+            }
+            default -> {
+                Log.d(TAG, "getCredential Fallthrough. Unexpected security strategy [" + metaData.securityLevel.name + "]");
                 call.resolve(SecureCredentialsResult.errorResult(SecureCredentialsError.noData).toJS());
+            }
         }
     }
 
@@ -146,11 +147,13 @@ public class SecureCredentialsPlugin extends Plugin {
     }
 
     @PluginMethod
-    public void maximumSecurityLevel(PluginCall call) {
-        Log.d(TAG, "maximumSecurityLevel");
-        SecurityLevel max = helper.maximumSupportedLevel(getContext());
-        Log.d(TAG, "maximumSecurityLevel " + max.value);
-        call.resolve((new SecureCredentialsResult<>(true, max.value)).toJS());
+    public void availableSecurityStrategies(PluginCall call) {
+        SecurityStrategy[] strategyList = helper.availableSecurityStrategies(getContext());
+        JSArray array = new JSArray();
+        for (SecurityStrategy s: strategyList) {
+            array.put(s.toJS());
+        }
+        call.resolve(new SecureCredentialsResult<>(true, array).toJS());
     }
 
     @PluginMethod
@@ -172,43 +175,19 @@ public class SecureCredentialsPlugin extends Plugin {
         call.resolve((new SecureCredentialsResult<>(true, result)).toJS());
     }
 
-    private void startBiometric(final PluginCall call, String service, String username) {
-        Log.d(TAG, "startBiometric for user [" + username + "]");
-        Intent intent = new Intent(getContext(), AuthActivity.class);
-        intent.putExtra(AuthActivity.SERVICE_KEY, service);
-        intent.putExtra(AuthActivity.USERNAME_KEY, username);
-
-        String title = call.getString(AuthActivity.TITLE_KEY);
-        if (title != null) {
-            intent.putExtra(AuthActivity.TITLE_KEY, title);
-        }
-
-        String subtitle = call.getString(AuthActivity.SUBTITLE_KEY);
-        if (subtitle != null) {
-            intent.putExtra(AuthActivity.SUBTITLE_KEY, subtitle);
-        }
-
-        String description = call.getString(AuthActivity.DESCRIPTION_KEY);
-        if (description != null) {
-            intent.putExtra(AuthActivity.DESCRIPTION_KEY, description);
-        }
-
-        String negativeButtonKey = call.getString(AuthActivity.NEGATIVE_BUTTON_KEY);
-        if (negativeButtonKey != null) {
-            intent.putExtra(AuthActivity.NEGATIVE_BUTTON_KEY, negativeButtonKey);
-        }
-
-        startActivityForResult(call, intent, "biometricResult");
-    }
+    private static final String TITLE_KEY = "title";
+    private static final String SUBTITLE_KEY = "subtitle";
+    private static final String DESCRIPTION_KEY = "description";
+    private static final String NEGATIVE_BUTTON_KEY = "negativeButtonText";
 
     @MainThread
-    private void startBiometricLight(final PluginCall call, String service, String username) {
+    private void startBiometricPrompt(final PluginCall call, String service, String username, SecurityStrategyName securityStrategy) {
         SecureCredentialsHelper helper = new SecureCredentialsHelper();
         Context context = getContext();
-        String title = call.getString(AuthActivity.TITLE_KEY);
-        String subtitle = call.getString(AuthActivity.SUBTITLE_KEY);
-        String description = call.getString(AuthActivity.DESCRIPTION_KEY);
-        String negativeButtonKey = call.getString(AuthActivity.NEGATIVE_BUTTON_KEY);
+        String title = call.getString(TITLE_KEY);
+        String subtitle = call.getString(SUBTITLE_KEY);
+        String description = call.getString(DESCRIPTION_KEY);
+        String negativeButtonKey = call.getString(NEGATIVE_BUTTON_KEY);
         MetaData metaData = helper.loadMetaData(context, service, username);
 
         BiometricPrompt.PromptInfo.Builder promptInfoBuilder = new BiometricPrompt.PromptInfo.Builder()
@@ -216,18 +195,24 @@ public class SecureCredentialsPlugin extends Plugin {
                 .setSubtitle(subtitle)
                 .setDescription(description);
 
-        boolean supportsOnlyWeakBiometrics = Build.VERSION.SDK_INT == Build.VERSION_CODES.Q || Build.VERSION.SDK_INT == Build.VERSION_CODES.P;
-        int biometricAuthenticator = supportsOnlyWeakBiometrics ? BiometricManager.Authenticators.BIOMETRIC_WEAK : BiometricManager.Authenticators.BIOMETRIC_STRONG | BiometricManager.Authenticators.BIOMETRIC_WEAK;
-
-        if (metaData != null && metaData.securityLevel == SecurityLevel.L3_USER_PRESENCE) {
-            promptInfoBuilder.setNegativeButtonText(negativeButtonKey != null ? negativeButtonKey : "Cancel");
-            promptInfoBuilder.setAllowedAuthenticators(biometricAuthenticator | BiometricManager.Authenticators.DEVICE_CREDENTIAL);
-        } else {
-            promptInfoBuilder.setNegativeButtonText(negativeButtonKey != null ? negativeButtonKey : "Cancel");
-            promptInfoBuilder.setAllowedAuthenticators(biometricAuthenticator);
+        switch (securityStrategy) {
+            case STRONG_USER_PRESENCE -> {
+                promptInfoBuilder.setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG);
+                promptInfoBuilder.setNegativeButtonText(negativeButtonKey != null ? negativeButtonKey : "Cancel");
+            }
+            case PIN_USER_PRESENCE -> {
+                promptInfoBuilder.setAllowedAuthenticators(BiometricManager.Authenticators.DEVICE_CREDENTIAL);
+            }
+            case STANDARD_PLUS_BIO_CHECK -> {
+                promptInfoBuilder.setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_WEAK);
+                promptInfoBuilder.setNegativeButtonText(negativeButtonKey != null ? negativeButtonKey : "Cancel");
+            }
+            default -> {}
         }
 
+        // TODO: Make this configurable
         promptInfoBuilder.setConfirmationRequired(false);
+
         BiometricPrompt.PromptInfo promptInfo = promptInfoBuilder.build();
         Executor executor = ContextCompat.getMainExecutor(context);
         BiometricPrompt biometricPrompt = new BiometricPrompt(getActivity(), executor, new BiometricPrompt.AuthenticationCallback() {
@@ -243,6 +228,7 @@ public class SecureCredentialsPlugin extends Plugin {
                 try {
                     PrivateKey key = helper.getPrivateKey(context, service, username);
                     Cipher cipher = helper.getCipher(key);
+
                     String decryptedString = helper.decryptString(cipher, helper.getEncryptedData(context, service, username));
 
                     Log.d(TAG, "biometricResult received OK");
@@ -262,34 +248,22 @@ public class SecureCredentialsPlugin extends Plugin {
             @Override
             public void onAuthenticationFailed() {
                 super.onAuthenticationFailed();
-                Log.d(TAG, "biometricResult received CANCELED");
-                call.resolve(SecureCredentialsResult.errorResult(SecureCredentialsError.failedToAccess).toJS());
+//                Log.d(TAG, "biometricResult received CANCELED");
+//                call.resolve(SecureCredentialsResult.errorResult(SecureCredentialsError.failedToAccess).toJS());
             }
         });
 
         biometricPrompt.authenticate(promptInfo);
-    }
+////        biometricPrompt.authenticate(promptInfo);
+//        PrivateKey key = helper.getPrivateKey(context, service, username);
+//        Cipher cipher = helper.getCipher(key);
+////        Cipher cipher = helper.makeCipher();
+//        if (cipher == null) {
+//
+//        } else {
+//            biometricPrompt.authenticate(promptInfo, new BiometricPrompt.CryptoObject(cipher));
+//        }
 
-    @ActivityCallback
-    private void biometricResult(PluginCall call, ActivityResult result) {
-        if (call == null) {
-            return;
-        }
-
-        if (result.getResultCode() == RESULT_OK && result.getData() != null) {
-            Log.d(TAG, "biometricResult received OK");
-            String data = result.getData().getStringExtra("result");
-            JSObject credential = new JSObject();
-            credential.put(USERNAME_KEY, call.getString(USERNAME_KEY));
-            credential.put(PASSWORD_KEY, data);
-            call.resolve((new SecureCredentialsResult<>(true,credential)).toJS());
-        } else if (result.getResultCode() == RESULT_CANCELED) {
-            Log.d(TAG, "biometricResult received CANCELED");
-            call.resolve(SecureCredentialsResult.errorResult(SecureCredentialsError.failedToAccess).toJS());
-        } else {
-            Log.d(TAG, "biometricResult received ERROR");
-            call.resolve(SecureCredentialsResult.errorResult(SecureCredentialsError.unknown("Something unknown went wrong")).toJS());
-        }
     }
 
     public JsAble getCredential(String service, String username) {
@@ -313,14 +287,14 @@ public class SecureCredentialsPlugin extends Plugin {
         }
     }
 
-    public JsAble setCredential(String service, String username, String password, SecurityLevel securityLevel) {
+    public JsAble setCredential(String service, String username, String password, SecurityStrategyName securityStrategy) {
         Log.d(TAG, "setCredential for " + username);
         if (service == null || username == null || password == null) {
             return SecureCredentialsResult.errorResult(SecureCredentialsError.missingParameters);
         }
 
         try {
-            helper.createKey(getContext(), service, username, securityLevel);
+            helper.createKey(getContext(), service, username, securityStrategy);
         } catch (NoSuchProviderException | NoSuchAlgorithmException | InvalidAlgorithmParameterException | JSONException e) {
             e.printStackTrace();
             return SecureCredentialsResult.errorResult(SecureCredentialsError.unknown("error: " + e));
