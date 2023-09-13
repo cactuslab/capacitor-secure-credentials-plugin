@@ -72,7 +72,7 @@ public class SecureCredentialsPlugin extends Plugin {
         assert options != null;
 
         SecurityStrategyName securityStrategy = SecurityStrategyName.get(options.getString(STRATEGY_KEY));
-        Log.d(TAG, "setCredential for security strategy [" + securityStrategy.name + "]");
+//        Log.d(TAG, "setCredential for security strategy [" + securityStrategy.name + "]");
         call.resolve(setCredential(service, username, password, securityStrategy).toJS());
     }
 
