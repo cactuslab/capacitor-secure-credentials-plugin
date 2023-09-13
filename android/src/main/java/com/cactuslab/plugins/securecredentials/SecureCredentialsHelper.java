@@ -1,7 +1,6 @@
 package com.cactuslab.plugins.securecredentials;
 
 import android.annotation.SuppressLint;
-import android.app.KeyguardManager;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Build;
@@ -41,13 +40,14 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
 import java.util.List;
+import java.util.SimpleTimeZone;
+import java.util.TimeZone;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 
-import static androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG;
 import static androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL;
 
 
@@ -91,8 +91,21 @@ public class SecureCredentialsHelper {
 
         // Create a start and end time, for the validity range of the key pair that's about to be
         // generated.
-        Calendar start = new GregorianCalendar();
-        Calendar end = new GregorianCalendar();
+
+        GregorianCalendar start = null;
+        GregorianCalendar end = null;
+        String[] timezones = TimeZone.getAvailableIDs();
+        if (timezones.length > 0) {
+            start = new GregorianCalendar(new SimpleTimeZone(0, timezones[0]));
+            end = new GregorianCalendar(new SimpleTimeZone(0, timezones[0]));
+        } else {
+            start = new GregorianCalendar();
+            end = new GregorianCalendar();
+        }
+
+        // Fix for Huawei P20/30 devices
+        start.add(Calendar.DAY_OF_YEAR, -1);
+
         end.add(Calendar.YEAR, 30);
 
         BiometricManager biometricManager = BiometricManager.from(context);
