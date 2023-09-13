@@ -1,5 +1,11 @@
 # capacitor-secure-credentials-plugin
 
+## 3.0.1
+
+### Patch Changes
+
+- 25295e3: android: fixes key validity issue with Huawei P20 and P30 devices
+
 ## 3.0.0
 
 ### Major Changes
